@@ -6,8 +6,8 @@
 - Roman Macias
 - Taron Osifo
 
-**Instructor**
-- Diana Rabah
+**Instructor**: 
+Diana Rabah
 
-**TA**
-- Jordan Christopher Black
+**TA**:
+Jordan Christopher Black
