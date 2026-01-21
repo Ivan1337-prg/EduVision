@@ -1,4 +1,4 @@
-# AttendanceUNT | Project - 6 | Team - 15 (CanvasSync)
+# AttendanceUNT | Project - 6 | Team - 15 (EdgeVision)
 **Team Members**
 - Taras Glushko (Lead)
 - Bryce Smith
