@@ -1,4 +1,4 @@
-#LectureLink | Project - 6 | Team - 15 (EdgeVision)
+# LectureLink | Project - 6 | Team - 15 (EdgeVision)
 
 
 **Project Description**
