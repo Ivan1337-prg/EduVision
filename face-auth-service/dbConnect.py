@@ -25,7 +25,11 @@ def test_postgres_connection():
         cursor = connection.cursor()
         cursor.execute("SELECT version()")
         print(cursor.fetchone())
+    except psycopg2.DatabaseError as error:
+        print(f"Database error: {error}")
+        sys.exit(1)
     finally:
         connection.close()
+        return True
 
 
