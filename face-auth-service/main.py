@@ -1,6 +1,5 @@
 from fastapi import FastAPI
-from dbConnect import connect_to_postgres,test_postgres_connection
-from bootstrap import bootstrap_db
+from db import test_postgres_connection,connect_to_postgres,bootstrap_db
 import sys
 app = FastAPI()
 
