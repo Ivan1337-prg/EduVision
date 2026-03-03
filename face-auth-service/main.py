@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Request
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import TeacherRegisterRequest,TeacherLoginRequest,StartSession
 from db import test_postgres_connection, connect_to_postgres, bootstrap_db
@@ -29,11 +29,12 @@ JWT_ALG = os.environ["JWT_ALG"]
 ACCESS_TOKEN_MINUTES = 60
 
 
-def build_access_token(*, subject: str, teacher_id: str) -> str:
+def build_access_token(*, subject: str, teacher_id: str,name : str) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": subject,    
         "teacher_id": teacher_id,
+        "name" : name,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=ACCESS_TOKEN_MINUTES)).timestamp()),
     }
@@ -46,22 +47,80 @@ def build_access_token(*, subject: str, teacher_id: str) -> str:
     async def get_history(request: HistoryRequest):
 """
 
-
-
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
+@app.post("/session/start-session")
+async def start_session(request: Request):
+ conn = None
+ db_cursor = None
+
+ try:
+    conn = connect_to_postgres()
+    db_cursor = conn.cursor()
 
 
-@app.post("session/start-session")
-async def start_session():
+    auth = request.headers.get("Authorization")
+
+    if not auth or not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
     
-    return {"message": "Hello World"}
+    token = auth.split(" ")[1]
+    payload = jwt.decode(token, JWT_SECRET, algorithms=JWT_ALG)
+
+    teacher_id: str = payload.get("teacher_id")
+    name : str = payload.get("name")
+    email : str = payload.get("subject")
+
+    db_cursor.execute(
+            "SELECT id FROM teachers WHERE id = %s",
+            (teacher_id,)
+        )
+    teacher = db_cursor.fetchone()
+
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Could not find account! Make sure to create account")
+    
+    # check here later if a teacher session already exist
+
+
+    # random time will change at db level later
+    start_time = "2021-07-03 16:21:12.357246"
+
+    db_cursor.execute(
+    """
+    INSERT INTO class_sessions (teacher_id,start_time)
+    VALUES (%s,%s) RETURNING id
+     """,
+    (teacher_id,start_time,)
+    )
+    # probably will add a constrain of teacher_id being unique to not have multiple sessions
+
+    created_items = db_cursor.fetchone()
+    session_id = created_items[0]
+
+
+    # reduce the id of the class session to a small size
+
+
+    print(f"this is session id{session_id}")
+    return {"message": "session start",
+            "session_id" : f"{session_id}"}
+ 
+ except Exception as e:
+     return {"message" : f"{e}"}
+     
 
 @app.delete("session/end-session")
 async def end_session():
-    return {"message": "Hello World"}
+ try:
+    #check payload , check if teacher has session running,
+    #if teacher has no session running return cannot
+    #if teacher has session running end it
+    return {"message": "session end"}
+ except Exception as e:
+     pass
 
 
 
@@ -133,7 +192,7 @@ async def teacher_login(request: TeacherLoginRequest):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT id, email, password FROM teachers WHERE email = %s",
+            "SELECT id, email, password,name FROM teachers WHERE email = %s",
             (request.email.lower(),)
         )
 
@@ -145,6 +204,7 @@ async def teacher_login(request: TeacherLoginRequest):
         teacher_id = teacher[0]
         email = teacher[1]
         stored_hash = teacher[2]
+        name = teacher[3]
 
         if not bcrypt.checkpw(
             request.password.encode("utf-8"),
@@ -154,19 +214,21 @@ async def teacher_login(request: TeacherLoginRequest):
 
         token = build_access_token(
             subject=email,
-            teacher_id=str(teacher_id)
+            teacher_id=str(teacher_id),
+            name=str(name)
         )
 
+       #print(f"{teacher_id} {email} {stored_hash} {name}")
+
         return {
-            "access_token": token,
-            "token_type": "bearer"
+            "access_token": token
         }
 
     except HTTPException:
         raise
 
-    except Exception:
-        raise HTTPException(status_code=500, detail="server problem")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"server problem {e}")
 
     finally:
         if cursor:

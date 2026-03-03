@@ -44,7 +44,7 @@ def bootstrap_db():
         CREATE TABLE IF NOT EXISTS class_sessions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         teacher_id UUID NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-        start_time TIMESTAMP NOT NULL,
+        start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -59,9 +59,8 @@ def bootstrap_db():
         FOREIGN KEY (session_id) REFERENCES class_sessions(id) ON DELETE CASCADE,
         UNIQUE(student_id, session_id)
         );
-                          
-
-                          
+                        
+                                   
         """)
 
         
