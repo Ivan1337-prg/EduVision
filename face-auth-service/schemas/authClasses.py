@@ -6,3 +6,6 @@ class TeacherRegisterRequest(BaseModel):
     password: str
 
 
+class TeacherLoginRequest(BaseModel):
+    email: str
+    password : str
