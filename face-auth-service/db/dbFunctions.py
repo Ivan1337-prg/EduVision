@@ -4,6 +4,20 @@ import sys
 from dotenv import load_dotenv
 
 
+def connect_to_postgres():
+    
+    load_dotenv()
+    try: 
+        connection_string = os.getenv("DB_CONNECTION")
+        print('Connecting to the Psql database...')
+        connection = psycopg2.connect(connection_string)
+        return connection
+
+    except psycopg2.DatabaseError as error:
+        print(f"Database error: {error}")
+        sys.exit(1)
+
+
 def bootstrap_db():  
     try:
         conn = connect_to_postgres()
@@ -22,6 +36,8 @@ def bootstrap_db():
         CREATE TABLE IF NOT EXISTS teachers (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
+        email TEXT UNIQUE,
+        password TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -43,7 +59,14 @@ def bootstrap_db():
         FOREIGN KEY (session_id) REFERENCES class_sessions(id) ON DELETE CASCADE,
         UNIQUE(student_id, session_id)
         );
+                          
+
+                          
         """)
+
+        
+
+
         conn.commit()
         conn.close()
         return True
@@ -52,21 +75,6 @@ def bootstrap_db():
         print("Database initialization failed:", e)
         conn.rollback()
         return False
-
-
-
-def connect_to_postgres():
-    
-    load_dotenv()
-    try: 
-        connection_string = os.getenv("DB_CONNECTION")
-        print('Connecting to the Psql database...')
-        connection = psycopg2.connect(connection_string)
-        return connection
-
-    except psycopg2.DatabaseError as error:
-        print(f"Database error: {error}")
-        sys.exit(1)
 
 
 def test_postgres_connection():
