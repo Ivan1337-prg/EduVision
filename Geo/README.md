@@ -29,7 +29,5 @@ This module is currently implemented as a standalone prototype/demo. It is meant
 
 ## Future Improvements
 - Connect geolocation validation to backend API routes
-- Accept live GPS/location data from the final frontend
-- Support multiple classroom locations
 - Store validation attempts for attendance records
 - Combine location validation with face recognition results
