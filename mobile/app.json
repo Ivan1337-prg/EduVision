@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "EduVision Student",
+    "slug": "eduvision-mobile",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "platforms": ["ios", "android", "web"],
+    "orientation": "portrait",
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"]
+  }
+}
