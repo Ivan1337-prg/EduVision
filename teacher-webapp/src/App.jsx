@@ -1,9 +1,9 @@
 import React, {useState} from 'react'
 import './App.css'
-import Dashboard from './Dashboard.jsx'
-import Attendance from './Attendance.jsx'
-import Sidebar from './Sidebar.jsx'
-import Login from './Login.jsx'
+import Dashboard from './pages/Dashboard.jsx'
+import Attendance from './pages/Attendance.jsx'
+import Sidebar from './components/Sidebar.jsx'
+import Login from './pages/Login.jsx'
 
 
 function App() {

@@ -1,6 +1,6 @@
 import React from 'react';
-import AttendanceTable from './AttendanceTable.jsx';
-import Cards from './cards.jsx'
+import AttendanceTable from '../utils/AttendanceTable.jsx';
+import Cards from '../components/cards.jsx'
 function Attendance(){
     return(
         <div>
