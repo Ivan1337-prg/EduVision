@@ -1,22 +1,32 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import React, {useState} from 'react'
 import './App.css'
+import Dashboard from './pages/Dashboard.jsx'
+import Attendance from './pages/Attendance.jsx'
+import Sidebar from './components/Sidebar.jsx'
+import Login from './pages/Login.jsx'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [page, setPage] = useState("dashboard")
+  const [isLoggedin, setLogin] = useState(false)
+  if(isLoggedin){
+    return(
+      <>
+      <Sidebar setPage = {setPage}/>
+      <div className = "main">
+        {page === "dashboard" && <Dashboard/>}
+        {page === "attendance" && <Attendance/>}
+      </div>
+      </>
+    );
+  }
+  else{
+    return(
+      <Login setLogin={setLogin}/>
 
-  return (
-    <>
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-        </div>
+    );
+  }
 
-          <h1>TEACHER WEB APP</h1>
-        
-    </>
-  )
 }
 
-export default App
+export default App;
+
