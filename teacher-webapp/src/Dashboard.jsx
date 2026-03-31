@@ -1,5 +1,5 @@
 
-import Session from './util/Session.jsx'
+import Session from './Session.jsx'
 
 function Dashboard(){
     return(
