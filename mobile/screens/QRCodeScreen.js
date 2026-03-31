@@ -7,29 +7,29 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
-
+ 
 const logoImage = require('../assets/EduVisionLogo.png');
-
+ 
 const QRCodeScreen = ({ navigation, route }) => {
   const { studentId, studentName } = route.params;
-  const [hasCameraPermission, setHasCameraPermission] = useState(null);
+  const [hasCameraPermission, setHasCameraPermission] = useCameraPermissions();
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
   const [statusMessage, setStatusMessage] = useState('Ready for facial capture.');
   const [locationText, setLocationText] = useState('Checking location...');
-
+ 
   useEffect(() => {
     requestPermissions();
   }, []);
-
+ 
   const requestPermissions = async () => {
-    const cameraResult = await BarCodeScanner.requestPermissionsAsync();
+    const cameraResult = await requestPermission();
     setHasCameraPermission(cameraResult.status === 'granted');
-
+ 
     const locationResult = await Location.requestForegroundPermissionsAsync();
     setHasLocationPermission(locationResult.status === 'granted');
-
+ 
     if (locationResult.status === 'granted') {
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
       const formatted = `${location.coords.latitude.toFixed(5)}, ${location.coords.longitude.toFixed(5)}`;
@@ -38,13 +38,13 @@ const QRCodeScreen = ({ navigation, route }) => {
       setLocationText('Location permission is required to verify presence in class.');
     }
   };
-
+ 
   const handleCapture = async () => {
     setStatusMessage('Capturing face...');
-
+ 
     let locationStatus = 'Unknown';
     let locationTextCopy = locationText;
-
+ 
     if (hasLocationPermission) {
       try {
         const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
@@ -57,7 +57,7 @@ const QRCodeScreen = ({ navigation, route }) => {
         locationStatus = 'Location unavailable';
       }
     }
-
+ 
     navigation.navigate('Attendance', {
       studentId,
       studentName,
@@ -67,14 +67,14 @@ const QRCodeScreen = ({ navigation, route }) => {
       locationText: locationTextCopy,
     });
   };
-
+ 
   const isInClassroom = (latitude, longitude) => {
     const classLat = 37.4220;
     const classLon = -122.0841;
     const distanceMeters = getDistanceFromLatLonInMeters(latitude, longitude, classLat, classLon);
     return distanceMeters < 300;
   };
-
+ 
   const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
     const toRad = (value) => (value * Math.PI) / 180;
     const earthRadius = 6371000;
@@ -86,7 +86,7 @@ const QRCodeScreen = ({ navigation, route }) => {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return earthRadius * c;
   };
-
+ 
   if (hasCameraPermission === null) {
     return (
       <View style={styles.loadingContainer}>
@@ -95,7 +95,7 @@ const QRCodeScreen = ({ navigation, route }) => {
       </View>
     );
   }
-
+ 
   if (hasCameraPermission === false) {
     return (
       <View style={styles.messageContainer}>
@@ -103,7 +103,7 @@ const QRCodeScreen = ({ navigation, route }) => {
       </View>
     );
   }
-
+ 
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
@@ -124,9 +124,7 @@ const QRCodeScreen = ({ navigation, route }) => {
         </View>
       </View>
       <View style={styles.scannerWrapper}>
-        <BarCodeScanner
-          style={StyleSheet.absoluteFillObject}
-        />
+        <CameraView style={StyleSheet.absoluteFillObject} facing="front" />
       </View>
       <Text style={styles.scanHint}>Scan manually or press the camera button to capture.</Text>
       <TouchableOpacity style={styles.scanButton} onPress={handleCapture}>
@@ -140,7 +138,7 @@ const QRCodeScreen = ({ navigation, route }) => {
     </View>
   );
 };
-
+ 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -301,5 +299,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
+ 
 export default QRCodeScreen;
