@@ -12,7 +12,7 @@ import * as Location from 'expo-location';
  
 const logoImage = require('../assets/EduVisionLogo.png');
  
-const QRCodeScreen = ({ navigation, route }) => {
+const FaceScanScreen = ({ navigation, route }) => {
   const { studentId, studentName } = route.params;
   const [hasCameraPermission, setHasCameraPermission] = useCameraPermissions();
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
@@ -300,4 +300,4 @@ const styles = StyleSheet.create({
   },
 });
  
-export default QRCodeScreen;
+export default FaceScanScreen;

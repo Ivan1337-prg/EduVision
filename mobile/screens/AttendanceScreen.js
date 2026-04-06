@@ -44,7 +44,7 @@ const AttendanceScreen = ({ navigation, route }) => {
       <View style={styles.footerCard}>
         <Text style={styles.footerLabel}>{locationText}</Text>
       </View>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('QRScan', { studentId, studentName })}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('FaceScan', { studentId, studentName })}>
         <Text style={styles.buttonText}>Scan Again</Text>
       </TouchableOpacity>
     </View>
