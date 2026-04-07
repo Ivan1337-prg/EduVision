@@ -1,56 +1,243 @@
-.search {
-  display: block;
-  margin: 10px 0;
-  padding: 8px;
-  width: 300px;
-  font-size: 16px;
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f7fdf9;
+  color: #1f2937;
 }
 
-.logo{
-  width: 90%;
-  height: auto;
-  margin-top: -45px;
-
-}
-.LoginImage{
-  display: block;
-  margin: 0 auto;
-  justify-content: center;
-  width: 40%;
-  height: auto;
-  align-items: center;
-  margin-bottom: 5px;
-  margin: top 5px;
-
-}
-
-.Logindetail{
-  display: flex;
-  justify-content: center;
-  font-display: bold;
-  
-}
-.Logindetail2{
-   
-  display: flex;
-  justify-content: center;
-  
-  
-}
-.Login-button{
-
-  color: green;
-  border-radius: .5%;
-}
-
-.Card{
-  border: 1px solid rgb(32, 27, 27);
-  border-radius: 10px;
-  box-shadow: 5px 5px 5px hsla(0, 0%, 0%, 0.1);
+/* Layout */
+.main {
+  margin-left: 240px;
   padding: 30px;
-  margin: 10px;
-  text-align: center;
-  width: 170px;
-  height: 80px;
+}
+
+/* 🌿 Sidebar */
+.sidebar {
+  position: fixed;
+  width: 220px;
+  height: 100vh;
+  background: white;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.05);
+  padding: 20px;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+.logo {
+  width: 140px;
+  margin-bottom: 20px;
+}
+
+/* Sidebar buttons */
+.sidebar-button button {
+  width: 100%;
+  margin: 10px 0;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.sidebar-button button:hover {
+  background: #10b981;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* 🌿 Cards */
+.Card {
   display: inline-block;
+  width: 200px;
+  margin: 10px;
+  padding: 20px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  transition: 0.3s;
+}
+
+.Card:hover {
+  transform: translateY(-5px) scale(1.02);
+}
+
+.card-text {
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.card-num {
+  font-size: 32px;
+  font-weight: bold;
+  color: #10b981;
+}
+
+/* 🌿 Search Bar */
+.search-container {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.search {
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #f0fdf4;
+  flex: 1;
+  outline: none;
+  font-size: 14px;
+}
+
+.search-button {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 12px;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.search-button:hover {
+  background: #059669;
+}
+
+/* 🌿 Manage Button */
+.manage {
+  margin-top: 15px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.manage:hover {
+  background: #10b981;
+  color: white;
+}
+
+/* 🌿 Dashboard Card */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  margin-top: 20px;
+}
+
+/* 🌿 Login Page */
+.LoginImage {
+  width: 180px;
+  display: block;
+  margin: 40px auto;
+}
+
+.Logindetail {
+  text-align: center;
+}
+
+.Logindetail2 {
+  text-align: center;
+}
+
+/* Inputs */
+.email,
+.Password {
+  width: 250px;
+  padding: 12px;
+  margin: 10px auto;
+  display: block;
+  border-radius: 12px;
+  border: none;
+  background: #f0fdf4;
+  outline: none;
+}
+
+/* Login Button */
+.Login-button {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: #10b981;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.Login-button:hover {
+  background: #059669;
+}
+
+/* 🌿 Headings */
+h1 {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+h2 {
+  margin-top: 20px;
+}
+
+/* 🌿 Smooth everything */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+.class-info {
+  background: white;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  margin-top: 20px;
+  max-width: 600px;
+}
+
+.class-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+.currentSession {
+  margin-top: 30px;
+  font-size: 22px;
+  font-weight: 600;
+  padding: 15px 20px;
+  border-radius: 15px;
+  display: inline-block;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+  .Status-button {
+  margin: 15px 10px 0 0;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 12px;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+/* Hover */
+.Status-button:hover {
+  background: #059669;
+  transform: translateY(-2px);
+}
+
+/* Click feel */
+.Status-button:active {
+  transform: scale(0.97);
 }

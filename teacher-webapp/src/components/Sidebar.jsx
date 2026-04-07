@@ -8,10 +8,13 @@ function Sidebar({setPage}){
         <h1>
         <img className = "logo" src={pictr}></img>
     </h1>
-      <h2>Sidebar</h2>
-      <button onClick={() => setPage("dashboard")}>Dashboard</button>
-      <button onClick={() => setPage("attendance")}>Attendance</button>
-        <button>settings</button>
+      <h2>Navigation</h2>
+      <div className="sidebar-button">
+      <button onClick={() => setPage("dashboard")} className="sidebar-button">Dashboard</button>
+      <button onClick={() => setPage("attendance")} className="sidebar-button">Attendance</button>
+      <button className="sidebar-button"> Logs </button>
+        <button className="sidebar-button">Settings</button>
+        </div>
     </div>
   );
 }
