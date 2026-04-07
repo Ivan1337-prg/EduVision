@@ -11,7 +11,7 @@ body {
   padding: 30px;
 }
 
-/* 🌿 Sidebar */
+/* Sidebar */
 .sidebar {
   position: fixed;
   width: 220px;
@@ -48,7 +48,7 @@ body {
   transform: translateY(-2px);
 }
 
-/* 🌿 Cards */
+/* Cards */
 .Card {
   margin-left:20px;
   display: inline-block;
@@ -76,7 +76,7 @@ body {
   color: #10b981;
 }
 
-/* 🌿 Search Bar */
+/* Search Bar */
 .search-container {
     margin-left:20px;
   display: flex;
@@ -110,7 +110,7 @@ body {
   background: #059669;
 }
 
-/* 🌿 Manage Button */
+/*  Manage Button */
 .manage {
     margin-left:40px;
   margin-top: 15px;
@@ -129,7 +129,7 @@ body {
   color: white;
 }
 
-/* 🌿 Dashboard Card */
+/* Dashboard Card */
 .card {
     margin-left:20px;
   background: white;
@@ -139,7 +139,7 @@ body {
   margin-top: 20px;
 }
 
-/* 🌿 Login Page */
+/* Login Page */
 .LoginImage {
   width: 180px;
   display: block;
@@ -183,7 +183,7 @@ body {
   background: #059669;
 }
 
-/* 🌿 Headings */
+/* Headings */
 h1 {
     margin-left:20px;
   font-size: 32px;
@@ -195,7 +195,7 @@ h2 {
   margin-top: 20px;
 }
 
-/* 🌿 Smooth everything */
+/* Smooth everything */
 * {
   transition: all 0.2s ease-in-out;
 }
@@ -252,7 +252,7 @@ h2 {
   transform: scale(0.97);
 }
 
-/* 🌿 Table Container */
+/* Table Container */
 .attendanceTable {
     margin-left:20px;
   width: 100%;
@@ -261,7 +261,7 @@ h2 {
   border-spacing: 0 10px; /* space between rows */
 }
 
-/* 🌿 Header */
+/* Header */
 .attendanceTable thead th {
   text-align: left;
   padding: 12px 15px;
@@ -270,7 +270,7 @@ h2 {
   font-weight: 600;
 }
 
-/* 🌿 Rows (bubbly cards style) */
+/* Rows (bubbly cards style) */
 .attendanceTable tbody tr {
   background: white;
   box-shadow: 0 8px 20px rgba(0,0,0,0.04);
@@ -289,19 +289,19 @@ h2 {
   border-bottom-right-radius: 15px;
 }
 
-/* 🌿 Cells */
+/* Cells */
 .attendanceTable td {
   padding: 15px;
   font-size: 14px;
 }
 
-/* 🌿 Hover effect */
+/* Hover effect */
 .attendanceTable tbody tr:hover {
   transform: scale(1.01);
   background: #f0fdf4;
 }
 
-/* 🌿 Status colors */
+/* Status colors */
 .status-present {
   color: #10b981;
   font-weight: 600;
@@ -317,7 +317,7 @@ h2 {
   font-weight: 600;
 }
 
-/* 🌿 Verification badges */
+/* Verification badges */
 .badge {
   padding: 5px 10px;
   border-radius: 10px;
@@ -334,4 +334,78 @@ h2 {
 .badge-no {
   background: #fee2e2;
   color: #991b1b;
+}
+
+body {
+  background: linear-gradient(135deg, #ecfdf5, #f7fdf9);
+}
+
+/* Main login card */
+.login-container {
+  width: 350px;
+  margin: 100px auto;
+  padding: 40px;
+  background: white;
+  border-radius: 25px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+/* Logo */
+.LoginImage {
+  width: 160px;
+  margin-bottom: 15px;
+}
+
+/*Title */
+.Logindetail {
+  margin-bottom: 25px;
+  color: #065f46;
+}
+
+/* Inputs */
+.email,
+.Password {
+  width: 100%;
+  padding: 14px;
+  margin: 10px 0;
+  border-radius: 12px;
+  border: none;
+  background: #f0fdf4;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s;
+}
+
+/* Input focus effect */
+.email:focus,
+.Password:focus {
+  background: #dcfce7;
+  transform: scale(1.02);
+}
+
+/*Login Button */
+.Login-button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 15px;
+  border-radius: 12px;
+  border: none;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+/* Hover */
+.Login-button:hover {
+  background: #059669;
+  transform: translateY(-2px);
+}
+
+/* Click */
+.Login-button:active {
+  transform: scale(0.97);
 }
