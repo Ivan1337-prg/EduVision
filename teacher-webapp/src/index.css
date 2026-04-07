@@ -141,9 +141,10 @@ body {
 
 /* Login Page */
 .LoginImage {
-  width: 180px;
+  width: 30%;
   display: block;
   margin: 40px auto;
+  border-radius: 5%;
 }
 
 .Logindetail {
@@ -162,14 +163,14 @@ body {
   margin: 10px auto;
   display: block;
   border-radius: 12px;
-  border: none;
+  border: black 1px solid;
   background: #f0fdf4;
   outline: none;
 }
 
 /* Login Button */
 .Login-button {
-  padding: 12px 20px;
+  padding: 12px;
   border-radius: 12px;
   border: none;
   background: #10b981;
@@ -177,6 +178,7 @@ body {
   font-weight: bold;
   cursor: pointer;
   transition: 0.2s;
+  width: 50%;
 }
 
 .Login-button:hover {
@@ -340,72 +342,3 @@ body {
   background: linear-gradient(135deg, #ecfdf5, #f7fdf9);
 }
 
-/* Main login card */
-.login-container {
-  width: 350px;
-  margin: 100px auto;
-  padding: 40px;
-  background: white;
-  border-radius: 25px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-  text-align: center;
-}
-
-/* Logo */
-.LoginImage {
-  width: 160px;
-  margin-bottom: 15px;
-}
-
-/*Title */
-.Logindetail {
-  margin-bottom: 25px;
-  color: #065f46;
-}
-
-/* Inputs */
-.email,
-.Password {
-  width: 100%;
-  padding: 14px;
-  margin: 10px 0;
-  border-radius: 12px;
-  border: none;
-  background: #f0fdf4;
-  font-size: 14px;
-  outline: none;
-  transition: 0.2s;
-}
-
-/* Input focus effect */
-.email:focus,
-.Password:focus {
-  background: #dcfce7;
-  transform: scale(1.02);
-}
-
-/*Login Button */
-.Login-button {
-  width: 100%;
-  padding: 14px;
-  margin-top: 15px;
-  border-radius: 12px;
-  border: none;
-  background: #10b981;
-  color: white;
-  font-weight: 600;
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-/* Hover */
-.Login-button:hover {
-  background: #059669;
-  transform: translateY(-2px);
-}
-
-/* Click */
-.Login-button:active {
-  transform: scale(0.97);
-}
