@@ -2,6 +2,23 @@ import os
 import psycopg2
 import sys
 from dotenv import load_dotenv
+from psycopg2.extras import execute_values
+
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+
+
+def parse_student_identity(filename_stem):
+    parts = filename_stem.split("_", 1)
+
+    if len(parts) == 2 and parts[0].isdigit():
+        student_code = parts[0]
+        display_name = parts[1].replace("_", " ").strip()
+        if display_name:
+            return display_name, student_code
+
+    display_name = filename_stem.replace("_", " ").strip()
+    return display_name, filename_stem.upper()
 
 
 def connect_to_postgres():
@@ -19,6 +36,7 @@ def connect_to_postgres():
 
 
 def bootstrap_db():  
+    conn = None
     try:
         conn = connect_to_postgres()
         db_cursor = conn.cursor()
@@ -29,7 +47,9 @@ def bootstrap_db():
         CREATE TABLE IF NOT EXISTS students (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
+        student_code TEXT UNIQUE,
         face_image BYTEA,
+        face_image_filename TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -45,6 +65,8 @@ def bootstrap_db():
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         teacher_id UUID NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        end_time TIMESTAMP,
+        status TEXT NOT NULL DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -59,12 +81,41 @@ def bootstrap_db():
         FOREIGN KEY (session_id) REFERENCES class_sessions(id) ON DELETE CASCADE,
         UNIQUE(student_id, session_id)
         );
-                        
-                                   
         """)
 
-        
+        db_cursor.execute(
+            """
+            ALTER TABLE students
+            ADD COLUMN IF NOT EXISTS student_code TEXT UNIQUE
+            """
+        )
+        db_cursor.execute(
+            """
+            ALTER TABLE students
+            ADD COLUMN IF NOT EXISTS face_image_filename TEXT
+            """
+        )
+        db_cursor.execute(
+            """
+            ALTER TABLE class_sessions
+            ADD COLUMN IF NOT EXISTS end_time TIMESTAMP
+            """
+        )
+        db_cursor.execute(
+            """
+            ALTER TABLE class_sessions
+            ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'
+            """
+        )
+        db_cursor.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS one_active_session_per_teacher
+            ON class_sessions (teacher_id)
+            WHERE status = 'active'
+            """
+        )
 
+        seed_student_faces(db_cursor)
 
         conn.commit()
         conn.close()
@@ -72,7 +123,8 @@ def bootstrap_db():
     
     except Exception as e:
         print("Database initialization failed:", e)
-        conn.rollback()
+        if conn:
+            conn.rollback()
         return False
 
 
@@ -89,6 +141,44 @@ def test_postgres_connection():
     finally:
         connection.close()
         return True
+
+
+def seed_student_faces(db_cursor):
+    if not os.path.isdir(DATA_DIR):
+        return
+
+    rows = []
+    for filename in sorted(os.listdir(DATA_DIR)):
+        file_path = os.path.join(DATA_DIR, filename)
+        if not os.path.isfile(file_path):
+            continue
+
+        stem, extension = os.path.splitext(filename)
+        if extension.lower() not in {".jpg", ".jpeg", ".png"}:
+            continue
+
+        display_name, student_code = parse_student_identity(stem)
+
+        with open(file_path, "rb") as image_file:
+            image_bytes = image_file.read()
+
+        rows.append((display_name, student_code, psycopg2.Binary(image_bytes), filename))
+
+    if not rows:
+        return
+
+    execute_values(
+        db_cursor,
+        """
+        INSERT INTO students (name, student_code, face_image, face_image_filename)
+        VALUES %s
+        ON CONFLICT (student_code) DO UPDATE SET
+            name = EXCLUDED.name,
+            face_image = EXCLUDED.face_image,
+            face_image_filename = EXCLUDED.face_image_filename
+        """,
+        rows,
+    )
 
 
 

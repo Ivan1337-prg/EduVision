@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
 class StartSession(BaseModel):
-    email: str
-
+    class_name: str | None = None
 
