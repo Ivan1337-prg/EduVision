@@ -2,21 +2,20 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import TeacherRegisterRequest, TeacherLoginRequest, StartSession
 from db import test_postgres_connection, connect_to_postgres, bootstrap_db
+from auth_utils import build_access_token, get_teacher_id_from_request
+from attendance_utils import (
+    ensure_session_exists_and_active,
+    fetch_session_attendance_rows,
+    get_active_session_for_teacher,
+    get_student_by_code,
+    seed_attendance_for_session,
+)
+from face_utils import compare_student_face
 import sys
 import uvicorn
 import bcrypt
-import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
-from psycopg2.extras import execute_values
-
-try:
-    import cv2
-    import numpy as np
-except ImportError:
-    cv2 = None
-    np = None
+from datetime import datetime
 
 
 load_dotenv()
@@ -30,141 +29,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_ALG = os.getenv("JWT_ALG")
-ACCESS_TOKEN_MINUTES = 60
-
-
-def get_jwt_settings():
-    if not JWT_SECRET or not JWT_ALG:
-        raise HTTPException(
-            status_code=500,
-            detail="JWT_SECRET and JWT_ALG must be set before using auth endpoints",
-        )
-
-    return JWT_SECRET, JWT_ALG
-
-
-def build_access_token(*, subject: str, teacher_id: str, name: str) -> str:
-    jwt_secret, jwt_alg = get_jwt_settings()
-    now = datetime.now(timezone.utc)
-    payload = {
-        "sub": subject,
-        "teacher_id": teacher_id,
-        "name": name,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(minutes=ACCESS_TOKEN_MINUTES)).timestamp()),
-    }
-    return jwt.encode(payload, jwt_secret, algorithm=jwt_alg)
-
-
-def get_teacher_payload(request: Request):
-    auth = request.headers.get("Authorization")
-
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token")
-
-    jwt_secret, jwt_alg = get_jwt_settings()
-    token = auth.split(" ")[1]
-    try:
-        payload = jwt.decode(token, jwt_secret, algorithms=[jwt_alg])
-    except JWTError as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
-
-    teacher_id = payload.get("teacher_id")
-    if not teacher_id:
-        raise HTTPException(status_code=401, detail="teacher id missing from token")
-
-    return payload
-
-
-def get_active_session_for_teacher(db_cursor, teacher_id: str):
-    db_cursor.execute(
-        """
-        SELECT id, teacher_id, start_time, end_time, status
-        FROM class_sessions
-        WHERE teacher_id = %s AND status = 'active'
-        ORDER BY start_time DESC
-        LIMIT 1
-        """,
-        (teacher_id,)
-    )
-    return db_cursor.fetchone()
-
-
-def convert_attendance_row(row):
-    return {
-        "attendance_id": str(row[0]),
-        "student_id": str(row[1]),
-        "student_name": row[2],
-        "student_code": row[3],
-        "session_id": str(row[4]),
-        "first_check_in": row[5].isoformat() if row[5] else None,
-        "fifteen_min_confirm": row[6].isoformat() if row[6] else None,
-        "status": "confirmed" if row[6] else "present" if row[5] else "pending",
-    }
-
-
-def fetch_session_attendance_rows(db_cursor, session_id: str):
-    db_cursor.execute(
-        """
-        SELECT attendance.id,
-               students.id,
-               students.name,
-               students.student_code,
-               attendance.session_id,
-               attendance.first_check_in,
-               attendance.fifteen_min_confirm
-        FROM attendance
-        JOIN students ON students.id = attendance.student_id
-        WHERE attendance.session_id = %s
-        ORDER BY students.name ASC
-        """,
-        (session_id,)
-    )
-    rows = db_cursor.fetchall()
-    return [convert_attendance_row(row) for row in rows]
-
-
-def rebuild_image_from_binary(image_bytes: bytes):
-    if not image_bytes:
-        raise HTTPException(status_code=400, detail="image body is empty")
-
-    if cv2 is None or np is None:
-        raise HTTPException(status_code=500, detail="opencv dependencies are not installed")
-
-    image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-    decoded_image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-
-    if decoded_image is None:
-        raise HTTPException(status_code=400, detail="could not decode image from binary body")
-
-    return decoded_image
-
-
-def compare_student_face(live_image_bytes: bytes, stored_image_bytes: bytes):
-    live_image = rebuild_image_from_binary(live_image_bytes)
-    stored_image = rebuild_image_from_binary(bytes(stored_image_bytes))
-
-    live_gray = cv2.cvtColor(live_image, cv2.COLOR_BGR2GRAY)
-    stored_gray = cv2.cvtColor(stored_image, cv2.COLOR_BGR2GRAY)
-
-    live_gray = cv2.resize(live_gray, (256, 256))
-    stored_gray = cv2.resize(stored_gray, (256, 256))
-
-    live_hist = cv2.calcHist([live_gray], [0], None, [256], [0, 256])
-    stored_hist = cv2.calcHist([stored_gray], [0], None, [256], [0, 256])
-
-    cv2.normalize(live_hist, live_hist)
-    cv2.normalize(stored_hist, stored_hist)
-
-    confidence_score = float(cv2.compareHist(live_hist, stored_hist, cv2.HISTCMP_CORREL))
-    matched = confidence_score >= 0.55
-
-    return matched, round(confidence_score, 4)
-
 
 
 """
@@ -186,11 +50,7 @@ async def start_session(request: Request):
         conn = connect_to_postgres()
         db_cursor = conn.cursor()
 
-        payload = get_teacher_payload(request)
-        teacher_id_value = payload.get("teacher_id")
-        if not isinstance(teacher_id_value, str):
-            raise HTTPException(status_code=401, detail="teacher id missing from token")
-        teacher_id = teacher_id_value
+        teacher_id = get_teacher_id_from_request(request)
 
         db_cursor.execute(
             "SELECT id, name, email FROM teachers WHERE id = %s",
@@ -220,21 +80,7 @@ async def start_session(request: Request):
 
         created_session = db_cursor.fetchone()
         session_id = created_session[0]
-
-        db_cursor.execute("SELECT id FROM students ORDER BY name ASC")
-        student_rows = db_cursor.fetchall()
-
-        if student_rows:
-            attendance_seed_rows = [(student_row[0], session_id) for student_row in student_rows]
-            execute_values(
-                db_cursor,
-                """
-                INSERT INTO attendance (student_id, session_id)
-                VALUES %s
-                ON CONFLICT (student_id, session_id) DO NOTHING
-                """,
-                attendance_seed_rows
-            )
+        seed_attendance_for_session(db_cursor, session_id)
 
         conn.commit()
 
@@ -272,11 +118,7 @@ async def current_session(request: Request):
         conn = connect_to_postgres()
         db_cursor = conn.cursor()
 
-        payload = get_teacher_payload(request)
-        teacher_id_value = payload.get("teacher_id")
-        if not isinstance(teacher_id_value, str):
-            raise HTTPException(status_code=401, detail="teacher id missing from token")
-        teacher_id = teacher_id_value
+        teacher_id = get_teacher_id_from_request(request)
 
         active_session = get_active_session_for_teacher(db_cursor, teacher_id)
         if not active_session:
@@ -316,10 +158,7 @@ async def get_session_attendance(session_id: str):
         conn = connect_to_postgres()
         db_cursor = conn.cursor()
 
-        db_cursor.execute(
-            "SELECT id FROM class_sessions WHERE id = %s",
-            (session_id,)
-        )
+        db_cursor.execute("SELECT id FROM class_sessions WHERE id = %s", (session_id,))
         if not db_cursor.fetchone():
             raise HTTPException(status_code=404, detail="session not found")
 
@@ -351,38 +190,8 @@ async def validate_student_face(session_id: str, student_code: str, request: Req
         db_cursor = conn.cursor()
 
         image_bytes = await request.body()
-
-        db_cursor.execute(
-            """
-            SELECT id, status
-            FROM class_sessions
-            WHERE id = %s
-            """,
-            (session_id,)
-        )
-        session_row = db_cursor.fetchone()
-
-        if not session_row:
-            raise HTTPException(status_code=404, detail="session not found")
-
-        if session_row[1] != "active":
-            raise HTTPException(status_code=400, detail="session not started")
-
-        db_cursor.execute(
-            """
-            SELECT id, name, student_code, face_image
-            FROM students
-            WHERE student_code = %s
-            """,
-            (student_code.upper(),)
-        )
-        student = db_cursor.fetchone()
-
-        if not student:
-            raise HTTPException(status_code=404, detail="student not found")
-
-        if not student[3]:
-            raise HTTPException(status_code=400, detail="student has no stored face image")
+        ensure_session_exists_and_active(db_cursor, session_id)
+        student = get_student_by_code(db_cursor, student_code)
 
         matched, confidence_score = compare_student_face(image_bytes, student[3])
         if not matched:
@@ -493,11 +302,7 @@ async def end_session(request: Request):
         conn = connect_to_postgres()
         db_cursor = conn.cursor()
 
-        payload = get_teacher_payload(request)
-        teacher_id_value = payload.get("teacher_id")
-        if not isinstance(teacher_id_value, str):
-            raise HTTPException(status_code=401, detail="teacher id missing from token")
-        teacher_id = teacher_id_value
+        teacher_id = get_teacher_id_from_request(request)
 
         active_session = get_active_session_for_teacher(db_cursor, teacher_id)
         if not active_session:
