@@ -4,4 +4,13 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "bcrypt",
+    "fastapi",
+    "numpy",
+    "opencv-python",
+    "psycopg2-binary",
+    "python-dotenv",
+    "python-jose",
+    "uvicorn",
+]
