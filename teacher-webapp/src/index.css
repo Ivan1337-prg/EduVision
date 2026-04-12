@@ -251,12 +251,9 @@ body {
   font-weight: bold;
   cursor: pointer;
   transition: 0.2s;
-<<<<<<< HEAD
+
   width: 30%;
-=======
-  width: 50%;
-  justify-self: center;
->>>>>>> 3dd1b0ee92cb6183d14d92081b3208d117eefb5e
+
 }
 
 .Login-button:hover {
