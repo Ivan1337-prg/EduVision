@@ -1,14 +1,21 @@
-from fastapi import FastAPI, HTTPException,Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from schemas import TeacherRegisterRequest,TeacherLoginRequest,StartSession
+from schemas import TeacherRegisterRequest, TeacherLoginRequest, StartSession
 from db import test_postgres_connection, connect_to_postgres, bootstrap_db
+from auth_utils import build_access_token, get_teacher_id_from_request
+from attendance_utils import (
+    ensure_session_exists_and_active,
+    fetch_session_attendance_rows,
+    get_active_session_for_teacher,
+    get_student_by_code,
+    seed_attendance_for_session,
+)
+from face_utils import compare_student_face
 import sys
 import uvicorn
 import bcrypt
-import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta, timezone
-from jose import jwt
+from datetime import datetime
 
 
 load_dotenv()
@@ -24,24 +31,6 @@ app.add_middleware(
 )
 
 
-JWT_SECRET = os.environ["JWT_SECRET"]
-JWT_ALG = os.environ["JWT_ALG"]
-ACCESS_TOKEN_MINUTES = 60
-
-
-def build_access_token(*, subject: str, teacher_id: str,name : str) -> str:
-    now = datetime.now(timezone.utc)
-    payload = {
-        "sub": subject,    
-        "teacher_id": teacher_id,
-        "name" : name,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(minutes=ACCESS_TOKEN_MINUTES)).timestamp()),
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
-
-
-
 """
 @app.post("/history", response_model=List[HistoryItem])
     async def get_history(request: HistoryRequest):
@@ -51,76 +40,308 @@ def build_access_token(*, subject: str, teacher_id: str,name : str) -> str:
 async def root():
     return {"message": "Hello World"}
 
+
 @app.post("/session/start-session")
 async def start_session(request: Request):
- conn = None
- db_cursor = None
+    conn = None
+    db_cursor = None
 
- try:
-    conn = connect_to_postgres()
-    db_cursor = conn.cursor()
+    try:
+        conn = connect_to_postgres()
+        db_cursor = conn.cursor()
 
+        teacher_id = get_teacher_id_from_request(request)
 
-    auth = request.headers.get("Authorization")
-
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token")
-    
-    token = auth.split(" ")[1]
-    payload = jwt.decode(token, JWT_SECRET, algorithms=JWT_ALG)
-
-    teacher_id: str = payload.get("teacher_id")
-    name : str = payload.get("name")
-    email : str = payload.get("subject")
-
-    db_cursor.execute(
-            "SELECT id FROM teachers WHERE id = %s",
+        db_cursor.execute(
+            "SELECT id, name, email FROM teachers WHERE id = %s",
             (teacher_id,)
         )
-    teacher = db_cursor.fetchone()
+        teacher = db_cursor.fetchone()
 
-    if not teacher:
-        raise HTTPException(status_code=404, detail="Could not find account! Make sure to create account")
-    
-    # check here later if a teacher session already exist
+        if not teacher:
+            raise HTTPException(status_code=404, detail="Could not find account! Make sure to create account")
+
+        active_session = get_active_session_for_teacher(db_cursor, teacher_id)
+        if active_session:
+            return {
+                "message": "session already active",
+                "session_id": f"{active_session[0]}",
+                "status": active_session[4],
+            }
+
+        db_cursor.execute(
+            """
+            INSERT INTO class_sessions (teacher_id, start_time, status)
+            VALUES (%s, CURRENT_TIMESTAMP, 'active')
+            RETURNING id, start_time, status
+            """,
+            (teacher_id,)
+        )
+
+        created_session = db_cursor.fetchone()
+        session_id = created_session[0]
+        seed_attendance_for_session(db_cursor, session_id)
+
+        conn.commit()
+
+        return {
+            "message": "session start",
+            "session_id": f"{session_id}",
+            "start_time": created_session[1].isoformat() if created_session[1] else None,
+            "status": created_session[2],
+            "attendance": fetch_session_attendance_rows(db_cursor, session_id),
+        }
+
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return {"message": f"{e}"}
+
+    finally:
+        if db_cursor:
+            db_cursor.close()
+        if conn:
+            conn.close()
 
 
-    # random time will change at db level later
-    start_time = "2021-07-03 16:21:12.357246"
+@app.get("/session/current")
+async def current_session(request: Request):
+    conn = None
+    db_cursor = None
 
-    db_cursor.execute(
-    """
-    INSERT INTO class_sessions (teacher_id,start_time)
-    VALUES (%s,%s) RETURNING id
-     """,
-    (teacher_id,start_time,)
-    )
-    # probably will add a constrain of teacher_id being unique to not have multiple sessions
+    try:
+        conn = connect_to_postgres()
+        db_cursor = conn.cursor()
 
-    created_items = db_cursor.fetchone()
-    session_id = created_items[0]
+        teacher_id = get_teacher_id_from_request(request)
+
+        active_session = get_active_session_for_teacher(db_cursor, teacher_id)
+        if not active_session:
+            return {"message": "no active session", "session": None}
+
+        return {
+            "message": "active session found",
+            "session": {
+                "session_id": str(active_session[0]),
+                "teacher_id": str(active_session[1]),
+                "start_time": active_session[2].isoformat() if active_session[2] else None,
+                "end_time": active_session[3].isoformat() if active_session[3] else None,
+                "status": active_session[4],
+            },
+            "attendance": fetch_session_attendance_rows(db_cursor, active_session[0]),
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"server problem {e}")
+
+    finally:
+        if db_cursor:
+            db_cursor.close()
+        if conn:
+            conn.close()
 
 
-    # reduce the id of the class session to a small size
+@app.get("/session/{session_id}/attendance")
+async def get_session_attendance(session_id: str):
+    conn = None
+    db_cursor = None
+
+    try:
+        conn = connect_to_postgres()
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("SELECT id FROM class_sessions WHERE id = %s", (session_id,))
+        if not db_cursor.fetchone():
+            raise HTTPException(status_code=404, detail="session not found")
+
+        return {
+            "session_id": session_id,
+            "attendance": fetch_session_attendance_rows(db_cursor, session_id),
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"server problem {e}")
+
+    finally:
+        if db_cursor:
+            db_cursor.close()
+        if conn:
+            conn.close()
 
 
-    print(f"this is session id{session_id}")
-    return {"message": "session start",
-            "session_id" : f"{session_id}"}
- 
- except Exception as e:
-     return {"message" : f"{e}"}
-     
+@app.post("/session/{session_id}/validate/{student_code}")
+async def validate_student_face(session_id: str, student_code: str, request: Request):
+    conn = None
+    db_cursor = None
 
-@app.delete("session/end-session")
-async def end_session():
- try:
-    #check payload , check if teacher has session running,
-    #if teacher has no session running return cannot
-    #if teacher has session running end it
-    return {"message": "session end"}
- except Exception as e:
-     pass
+    try:
+        conn = connect_to_postgres()
+        db_cursor = conn.cursor()
+
+        image_bytes = await request.body()
+        ensure_session_exists_and_active(db_cursor, session_id)
+        student = get_student_by_code(db_cursor, student_code)
+
+        matched, confidence_score = compare_student_face(image_bytes, student[3])
+        if not matched:
+            return {
+                "message": "face verification failed",
+                "matched": False,
+                "confidence_score": confidence_score,
+                "student_code": student[2],
+                "student_name": student[1],
+            }
+
+        db_cursor.execute(
+            """
+            SELECT id, first_check_in, fifteen_min_confirm
+            FROM attendance
+            WHERE session_id = %s AND student_id = %s
+            """,
+            (session_id, student[0])
+        )
+        attendance_row = db_cursor.fetchone()
+
+        if not attendance_row:
+            db_cursor.execute(
+                """
+                INSERT INTO attendance (student_id, session_id, first_check_in)
+                VALUES (%s, %s, CURRENT_TIMESTAMP)
+                RETURNING id, first_check_in, fifteen_min_confirm
+                """,
+                (student[0], session_id)
+            )
+            attendance_row = db_cursor.fetchone()
+            message = "check-in successful"
+        elif not attendance_row[1]:
+            db_cursor.execute(
+                """
+                UPDATE attendance
+                SET first_check_in = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING id, first_check_in, fifteen_min_confirm
+                """,
+                (attendance_row[0],)
+            )
+            attendance_row = db_cursor.fetchone()
+            message = "check-in successful"
+        elif attendance_row[2]:
+            message = "attendance already confirmed"
+        else:
+            first_check_in = attendance_row[1]
+            seconds_since_first_check = (datetime.utcnow() - first_check_in).total_seconds()
+
+            if seconds_since_first_check < 900:
+                return {
+                    "message": "confirmation too early",
+                    "matched": True,
+                    "confidence_score": confidence_score,
+                    "student_code": student[2],
+                    "student_name": student[1],
+                    "seconds_until_confirmation": int(900 - seconds_since_first_check),
+                }
+
+            db_cursor.execute(
+                """
+                UPDATE attendance
+                SET fifteen_min_confirm = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING id, first_check_in, fifteen_min_confirm
+                """,
+                (attendance_row[0],)
+            )
+            attendance_row = db_cursor.fetchone()
+            message = "attendance confirmed"
+
+        conn.commit()
+
+        return {
+            "message": message,
+            "matched": True,
+            "confidence_score": confidence_score,
+            "student_code": student[2],
+            "student_name": student[1],
+            "session_id": session_id,
+            "attendance": fetch_session_attendance_rows(db_cursor, session_id),
+        }
+
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=f"server problem {e}")
+
+    finally:
+        if db_cursor:
+            db_cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.delete("/session/end-session")
+async def end_session(request: Request):
+    conn = None
+    db_cursor = None
+
+    try:
+        conn = connect_to_postgres()
+        db_cursor = conn.cursor()
+
+        teacher_id = get_teacher_id_from_request(request)
+
+        active_session = get_active_session_for_teacher(db_cursor, teacher_id)
+        if not active_session:
+            raise HTTPException(status_code=404, detail="teacher has no active session")
+
+        db_cursor.execute(
+            """
+            UPDATE class_sessions
+            SET status = 'ended', end_time = CURRENT_TIMESTAMP
+            WHERE id = %s
+            RETURNING id, end_time, status
+            """,
+            (active_session[0],)
+        )
+        ended_session = db_cursor.fetchone()
+        conn.commit()
+
+        return {
+            "message": "session end",
+            "session_id": str(ended_session[0]),
+            "end_time": ended_session[1].isoformat() if ended_session[1] else None,
+            "status": ended_session[2],
+        }
+
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=f"server problem {e}")
+
+    finally:
+        if db_cursor:
+            db_cursor.close()
+        if conn:
+            conn.close()
 
 
 

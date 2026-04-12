@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -48,3 +49,6 @@ body {
   padding: 8px;
   text-align: left;
 }
+=======
+/* App-specific styles live in index.css. This file is intentionally minimal. */
+>>>>>>> 3dd1b0ee92cb6183d14d92081b3208d117eefb5e
