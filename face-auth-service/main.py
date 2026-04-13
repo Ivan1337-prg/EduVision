@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from schemas import TeacherRegisterRequest, TeacherLoginRequest, StartSession
+from schemas import TeacherRegisterRequest, TeacherLoginRequest, StartSession, StudentLoginRequest
 from db import test_postgres_connection, connect_to_postgres, bootstrap_db
-from auth_utils import build_access_token, get_teacher_id_from_request
+from auth_utils import build_access_token, get_teacher_id_from_request, build_student_access_token
 from attendance_utils import (
     ensure_session_exists_and_active,
     fetch_session_attendance_rows,
@@ -16,7 +16,7 @@ import uvicorn
 import bcrypt
 from dotenv import load_dotenv
 from datetime import datetime
-
+from uuid import UUID
 
 load_dotenv()
 app = FastAPI()
@@ -454,6 +454,62 @@ async def teacher_login(request: TeacherLoginRequest):
     finally:
         if cursor:
             cursor.close()
+        if conn:
+            conn.close()
+
+@app.post("/mobile/auth/login")
+async def student_login(request: StudentLoginRequest):
+    conn = None
+    db_cursor = None
+
+    try:
+        conn = connect_to_postgres()
+        db_cursor = conn.cursor()
+
+        db_cursor.execute(
+                "SELECT id, name, student_code FROM students WHERE student_code = %s",
+                (request.student_code,)
+        )
+
+        student = db_cursor.fetchone()
+
+        if not student:
+            raise HTTPException(status_code=401, detail="Incorrect student id or class session")
+        
+        student_id = student[0]
+        name = student[1]
+        student_code = student[2]
+
+        try:
+            UUID(request.session_id)
+        except ValueError:
+            raise HTTPException(status_code=401, detail="Incorrect student id or class session")
+
+        db_cursor.execute(
+            "SELECT id FROM class_sessions WHERE id = %s AND status = 'active'",
+            (request.session_id,)
+        )
+
+        session = db_cursor.fetchone()
+
+        if not session:
+            raise HTTPException(status_code=401, detail="Incorrect student id or class session")
+
+        return {
+            "student_code": student_code,
+            "session_id": session[0]
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail="server problem")
+    finally:
+        if db_cursor:
+            db_cursor.close()
         if conn:
             conn.close()
 

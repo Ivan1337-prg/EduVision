@@ -6,7 +6,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 const logoImage = require('../assets/EduVisionLogo.png');
 
 const QRScanScreen = ({ navigation, route }) => {
-    const { studentId, studentName } = route.params;
+    const { studentCode, sessionId } = route.params;
     const [hasCameraPermission, setHasCameraPermission] = useCameraPermissions();
 
     const requestPermissions = async () => {
@@ -16,8 +16,8 @@ const QRScanScreen = ({ navigation, route }) => {
 
     const handleCapture = () => {
         navigation.navigate('FaceScan', {
-            studentId: studentId,
-            studentName: studentName,
+            studentCode: studentCode,
+            sessionId: sessionId,
         });
     };
 

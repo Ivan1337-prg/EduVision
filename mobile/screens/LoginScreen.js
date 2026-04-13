@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_SERVER_URL } from '@env';
 import {
   View,
   Text,
@@ -15,20 +16,40 @@ import {
 const logoImage = require('../assets/EduVisionLogo.png');
 
 const LoginScreen = ({ navigation }) => {
-  const [studentId, setStudentId] = useState('');
-  const [password, setPassword] = useState('');
+  const [studentCode, setStudentCode] = useState('');
+  const [sessionId, setSessionId] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = () => {
-    if (!studentId.trim() || !password.trim()) {
-      setError('Please enter your student ID and password.');
-      return;
-    }
+  const handleLogin = async () => {
+    try {
+      if (!studentCode.trim() || !sessionId.trim()) {
+        setError('Please enter your student code and class session Id.');
+        return;
+      }
 
-    navigation.navigate('QRScan', {
-      studentId: studentId.trim(),
-      studentName: 'Student',
-    });
+      const response = await fetch(`${API_SERVER_URL}/mobile/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json'},
+          body: JSON.stringify({
+              student_code: studentCode,
+              session_id: sessionId
+            })
+      });
+
+      const server_response = await response.json();
+        
+      if(!response.ok) {
+        setError(server_response.detail);
+        return;
+      }
+
+      navigation.navigate('QRScan', {
+        studentCode: server_response.student_code,
+        sessionId: server_response.session_id,
+      });
+    } catch(e) {
+        setError("Error: " + e.message)
+    };
   };
 
   return (
@@ -56,31 +77,30 @@ const LoginScreen = ({ navigation }) => {
               <View style={styles.imagePlaceholder}>
                 <Text style={styles.imageText}>Login Illustration</Text>
               </View>
-              <Text style={styles.label}>Student ID</Text>
+              <Text style={styles.label}>Student Code</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your university ID"
+                placeholder="Enter your student code"
                 placeholderTextColor="#94a3b8"
-                value={studentId}
+                value={studentCode}
                 onChangeText={(value) => {
-                  setStudentId(value);
+                  setStudentCode(value);
                   if (error) setError('');
                 }}
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="next"
               />
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>Session ID</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your password"
+                placeholder="Enter your class session id"
                 placeholderTextColor="#94a3b8"
-                value={password}
+                value={sessionId}
                 onChangeText={(value) => {
-                  setPassword(value);
+                  setSessionId(value);
                   if (error) setError('');
                 }}
-                secureTextEntry
                 autoCorrect={false}
                 returnKeyType="done"
               />

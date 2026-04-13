@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { API_SERVER_URL } from '@env';
 import {
   View,
   Text,
@@ -13,11 +14,14 @@ import * as Location from 'expo-location';
 const logoImage = require('../assets/EduVisionLogo.png');
  
 const FaceScanScreen = ({ navigation, route }) => {
-  const { studentId, studentName } = route.params;
-  const [hasCameraPermission, setHasCameraPermission] = useCameraPermissions();
+  // const testImage = require('../assets/20260407_132317.jpg'); // Remove after testing
+  const { studentCode, sessionId } = route.params;
+  const [hasCameraPermission, requestPermission] = useCameraPermissions();
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
   const [statusMessage, setStatusMessage] = useState('Ready for facial capture.');
   const [locationText, setLocationText] = useState('Checking location...');
+  const [isCapturing, setIsCapturing] = useState(false);
+  const cameraRef = useRef(null);
  
   useEffect(() => {
     requestPermissions();
@@ -25,8 +29,11 @@ const FaceScanScreen = ({ navigation, route }) => {
  
   const requestPermissions = async () => {
     const cameraResult = await requestPermission();
-    setHasCameraPermission(cameraResult.status === 'granted');
  
+    if (!cameraResult.granted) {
+      setStatusMessage("Camera access denied.");
+    }
+
     const locationResult = await Location.requestForegroundPermissionsAsync();
     setHasLocationPermission(locationResult.status === 'granted');
  
@@ -40,32 +47,97 @@ const FaceScanScreen = ({ navigation, route }) => {
   };
  
   const handleCapture = async () => {
-    setStatusMessage('Capturing face...');
- 
-    let locationStatus = 'Unknown';
-    let locationTextCopy = locationText;
- 
-    if (hasLocationPermission) {
-      try {
-        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-        const current = `${location.coords.latitude.toFixed(5)}, ${location.coords.longitude.toFixed(5)}`;
-        locationTextCopy = `Current location: ${current}`;
-        locationStatus = isInClassroom(location.coords.latitude, location.coords.longitude)
-          ? 'In Class'
-          : 'Outside Class';
-      } catch (error) {
-        locationStatus = 'Location unavailable';
+    try {
+      if (isCapturing) return;
+      setIsCapturing(true);
+
+      setStatusMessage('Capturing face...');
+  
+      let locationStatus = 'Unknown';
+      let locationTextCopy = locationText;
+      
+      
+
+      if (hasLocationPermission) {
+        try {
+          const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
+          const current = `${location.coords.latitude.toFixed(5)}, ${location.coords.longitude.toFixed(5)}`;
+          locationTextCopy = `Current location: ${current}`;
+          locationStatus = isInClassroom(location.coords.latitude, location.coords.longitude)
+            ? 'In Class'
+            : 'Outside Class';
+        } catch (error) {
+          locationStatus = 'Location unavailable';
+        }
+
+
       }
+  
+      if (!cameraRef.current) {
+        setStatusMessage('Camera starting up. Try again.')
+        return;
+      }
+      // const photoResponse = await fetch(Image.resolveAssetSource(testImage).uri);
+      // const photoBlob = await photoResponse.blob();
+      const photo = await cameraRef.current.takePictureAsync();
+      const photoResponse = await fetch(photo.uri);
+      const photoBlob = await photoResponse.blob()
+
+      const response = await fetch(`${API_SERVER_URL}/session/${sessionId}/validate/${studentCode}`, {
+        method: "POST",
+        headers: { "Content-Type": "image/jpeg" },
+        body: photoBlob,
+      });
+
+      const server_response = await response.json();
+        
+      if(!response.ok) {
+        setStatusMessage(server_response.detail);
+        return;
+      }
+
+      const message = server_response.message;
+
+      if (message === "face verification failed") {
+        setStatusMessage(`Failed - score: ${server_response.confidence_score}`);
+        return;
+      } else if (message === "confirmation too early") {
+        const seconds = server_response.seconds_until_confirmation;
+        setStatusMessage(`Second scan failed. Try again in ${seconds} seconds.`)
+        return;
+      } else {
+        const attendanceMap = Object.fromEntries(
+          server_response.attendance.map(row => [row.student_code, row])
+        );
+
+        const studentAttendance = attendanceMap[studentCode];
+
+        const firstCheckIn = studentAttendance.first_check_in;
+        const fifteenMinConfirm = studentAttendance.fifteen_min_confirm;
+        const attendanceStatus = studentAttendance.status;
+        let recentScanTimestamp = null;
+
+        if (fifteenMinConfirm === null) {
+          recentScanTimestamp = new Date(firstCheckIn + 'Z').toLocaleTimeString()
+        } else {
+          recentScanTimestamp = new Date(fifteenMinConfirm + 'Z').toLocaleTimeString();
+        }
+
+        navigation.navigate('Attendance', {
+          studentCode,
+          sessionId,
+          locationStatus,
+          locationText: locationTextCopy,
+          recentScanTimestamp: recentScanTimestamp,
+          attendanceStatus: attendanceStatus
+        })
+      }
+
+    } catch (e) {
+      setStatusMessage("Error: " + e.message)
+    } finally {
+      setIsCapturing(false);
     }
- 
-    navigation.navigate('Attendance', {
-      studentId,
-      studentName,
-      scanData: 'Face image captured',
-      scannedAt: new Date().toLocaleTimeString(),
-      locationStatus,
-      locationText: locationTextCopy,
-    });
   };
  
   const isInClassroom = (latitude, longitude) => {
@@ -87,7 +159,7 @@ const FaceScanScreen = ({ navigation, route }) => {
     return earthRadius * c;
   };
  
-  if (hasCameraPermission === null) {
+  if (!hasCameraPermission) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#166534" />
@@ -96,7 +168,7 @@ const FaceScanScreen = ({ navigation, route }) => {
     );
   }
  
-  if (hasCameraPermission === false) {
+  if (!hasCameraPermission.granted) {
     return (
       <View style={styles.messageContainer}>
         <Text style={styles.messageText}>Camera permission is required to capture your face.</Text>
@@ -124,10 +196,10 @@ const FaceScanScreen = ({ navigation, route }) => {
         </View>
       </View>
       <View style={styles.scannerWrapper}>
-        <CameraView style={StyleSheet.absoluteFillObject} facing="front" />
+        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="front" />
       </View>
       <Text style={styles.scanHint}>Scan manually or press the camera button to capture.</Text>
-      <TouchableOpacity style={styles.scanButton} onPress={handleCapture}>
+      <TouchableOpacity style={styles.scanButton} onPress={handleCapture} disabled={isCapturing}>
         <Text style={styles.scanButtonIcon}>📷</Text>
       </TouchableOpacity>
       <Text style={styles.status}>{statusMessage}</Text>
