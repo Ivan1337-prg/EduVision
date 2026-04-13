@@ -14,7 +14,6 @@ import * as Location from 'expo-location';
 const logoImage = require('../assets/EduVisionLogo.png');
  
 const FaceScanScreen = ({ navigation, route }) => {
-  // const testImage = require('../assets/20260407_132317.jpg'); // Remove after testing
   const { studentCode, sessionId } = route.params;
   const [hasCameraPermission, requestPermission] = useCameraPermissions();
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
@@ -77,8 +76,7 @@ const FaceScanScreen = ({ navigation, route }) => {
         setStatusMessage('Camera starting up. Try again.')
         return;
       }
-      // const photoResponse = await fetch(Image.resolveAssetSource(testImage).uri);
-      // const photoBlob = await photoResponse.blob();
+
       const photo = await cameraRef.current.takePictureAsync();
       const photoResponse = await fetch(photo.uri);
       const photoBlob = await photoResponse.blob()
