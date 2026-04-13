@@ -6,12 +6,13 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "bcrypt",
+    "face-recognition",
     "fastapi",
     "numpy",
-    "opencv-python",
     "psycopg2-binary",
     "python-dotenv",
     "python-jose",
+    "setuptools<81",
     "uvicorn",
 ]
 
