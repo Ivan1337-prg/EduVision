@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import TeacherRegisterRequest, TeacherLoginRequest, StartSession, StudentLoginRequest
 from db import test_postgres_connection, connect_to_postgres, bootstrap_db
-from auth_utils import build_access_token, get_teacher_id_from_request, build_student_access_token
+from auth_utils import build_access_token, get_teacher_id_from_request
 from attendance_utils import (
     ensure_session_exists_and_active,
     fetch_session_attendance_rows,
