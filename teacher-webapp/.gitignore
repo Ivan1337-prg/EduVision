@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+DB_CONNECTION=postgresql://postgres:GSOjdiWUJSRtMLIgqdqPDdxDOEfRFyum@centerbeam.proxy.rlwy.net:58945/railway
+JWT_SECRET=JMFEW5HmZ6yCk0o3LC8aKEjz2OlyFPFbe2guWFm4Ehi
+JWT_ALG=HS256

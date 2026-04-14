@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Login from './pages/Login.jsx'
+
 import {
   endSessionRequest,
   getCurrentSession,
@@ -233,8 +234,13 @@ function App() {
             session={session}
             sessionLoading={sessionLoading}
             sessionMessage={sessionMessage}
+            setPage={setPage}
+            setAttendance={setAttendance}
           />
         )}
+
+        
+      
       </main>
     </>
   )
