@@ -471,3 +471,69 @@ body {
     overflow-x: auto;
   }
 }
+.manage-button {
+  margin: 15px 10px 0 0;
+  margin-left: 40px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 12px;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  width: 10%;
+  transition: all 0.2s ease-in-out;
+  will-change: transform;
+
+}
+
+.manage-button:hover {
+  
+  transform: scale(1.01);
+  background: #44e073;
+}
+
+.attbutton2{
+  margin: 5px 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+
+}
+.attbutton2:hover {
+  background: #059669;
+  transform: translateY(-2px);
+}
+
+.attbutton{
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.attbutton:hover {
+  background: #059669;
+  transform: translateY(-2px);
+}
+
+.dropdown {
+  position: absolute;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

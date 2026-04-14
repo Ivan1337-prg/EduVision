@@ -2,8 +2,12 @@ import { useMemo, useState } from 'react'
 import AttendanceTable from '../utils/AttendanceTable.jsx'
 import Cards from '../components/cards.jsx'
 
-function Attendance({ attendance, session, sessionLoading, sessionMessage }) {
+
+function Attendance({ attendance, session, sessionLoading, sessionMessage, setPage, setAttendance }) {
   const [query, setQuery] = useState('')
+  const [mode, setMode] = useState('view')
+
+
 
   const filteredAttendance = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -11,7 +15,7 @@ function Attendance({ attendance, session, sessionLoading, sessionMessage }) {
       return attendance
     }
 
-    return attendance.filter((student) => {
+    return attendance.filter(student => {
       return (
         student.student_name.toLowerCase().includes(normalizedQuery) ||
         student.student_code.toLowerCase().includes(normalizedQuery)
@@ -38,6 +42,8 @@ function Attendance({ attendance, session, sessionLoading, sessionMessage }) {
     )
   }, [attendance])
 
+ 
+
   return (
     <div>
       <h1>Attendance</h1>
@@ -62,8 +68,11 @@ function Attendance({ attendance, session, sessionLoading, sessionMessage }) {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
+      <button className="manage-button" onClick ={() => setMode(mode === 'manage' ? 'view' : 'manage')}>
+        {mode === 'view' ? 'Manage Attendance' : 'Finish'}
+      </button>
 
-      <AttendanceTable students={filteredAttendance} />
+      <AttendanceTable students={filteredAttendance} mode={mode} setAttendance={setAttendance} />
     </div>
   )
 }

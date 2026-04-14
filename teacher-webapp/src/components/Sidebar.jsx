@@ -15,7 +15,7 @@ function Sidebar({ onLogout, page, setPage }) {
         </button>
         <button
           onClick={() => setPage('attendance')}
-          className={page === 'attendance' ? 'nav-active' : ''}
+          className={page === 'attendance'  ? 'nav-active' : ''}
           type="button"
         >
           Attendance
