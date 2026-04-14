@@ -522,6 +522,10 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+.attbutton:hover {
+  background: #059669;
+  transform: translateY(-2px);
+}
 
 .dropdown {
   position: absolute;
