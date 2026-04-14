@@ -6,11 +6,20 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "bcrypt",
+    "face-recognition",
     "fastapi",
     "numpy",
-    "opencv-python",
     "psycopg2-binary",
     "python-dotenv",
     "python-jose",
+    "setuptools<81",
     "uvicorn",
 ]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["db", "schemas"]
