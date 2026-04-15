@@ -11,22 +11,39 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
 
   function updateLoginField(event) {
     const { name, value } = event.target
-    setLoginForm((current) => ({ ...current, [name]: value }))
+    const nextValue = name === 'email' ? value.replace(/\s+/g, '') : value
+    setLoginForm((current) => ({ ...current, [name]: nextValue }))
   }
 
   function updateRegisterField(event) {
     const { name, value } = event.target
-    setRegisterForm((current) => ({ ...current, [name]: value }))
+    const nextValue = name === 'email' ? value.replace(/\s+/g, '') : value
+    setRegisterForm((current) => ({ ...current, [name]: nextValue }))
+  }
+
+  function handleEmailInvalid(event) {
+    event.target.setCustomValidity('Please enter a valid email address.')
+  }
+
+  function clearFieldValidation(event) {
+    event.target.setCustomValidity('')
   }
 
   function submitLogin(event) {
     event.preventDefault()
-    onLogin(loginForm)
+    onLogin({
+      ...loginForm,
+      email: loginForm.email.trim().toLowerCase(),
+    })
   }
 
   function submitRegister(event) {
     event.preventDefault()
-    onRegister(registerForm)
+    onRegister({
+      ...registerForm,
+      name: registerForm.name.trim(),
+      email: registerForm.email.trim().toLowerCase(),
+    })
   }
 
   return (
@@ -62,6 +79,9 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
               type="email"
               value={loginForm.email}
               onChange={updateLoginField}
+              onInput={clearFieldValidation}
+              onInvalid={handleEmailInvalid}
+              autoComplete="email"
               required
             />
             <input
@@ -95,6 +115,9 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
               type="email"
               value={registerForm.email}
               onChange={updateRegisterField}
+              onInput={clearFieldValidation}
+              onInvalid={handleEmailInvalid}
+              autoComplete="email"
               required
             />
             <input
