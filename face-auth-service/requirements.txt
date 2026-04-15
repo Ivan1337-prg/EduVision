@@ -1,0 +1,9 @@
+bcrypt
+face-recognition
+fastapi
+numpy
+psycopg2-binary
+python-dotenv
+python-jose
+setuptools<81
+uvicorn

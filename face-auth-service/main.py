@@ -16,6 +16,7 @@ import uvicorn
 import bcrypt
 from dotenv import load_dotenv
 from datetime import datetime
+import os
 
 load_dotenv()
 app = FastAPI()
@@ -541,4 +542,10 @@ if __name__ == '__main__':
         sys.exit(1)
 
     print("Database ready for queries.")
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+    port_value = os.getenv("PORT") or os.getenv("APP_PORT")
+    if not port_value:
+        print("PORT or APP_PORT must be set before starting the service.")
+        sys.exit(1)
+
+    port = int(port_value)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
