@@ -77,6 +77,7 @@ const FaceScanScreen = ({ navigation, route }) => {
         return;
       }
 
+      // Image in fetch body sends wrong type, or cant be decoded
       const photo = await cameraRef.current.takePictureAsync();
       const photoResponse = await fetch(photo.uri);
       const photoBlob = await photoResponse.blob()
@@ -86,6 +87,8 @@ const FaceScanScreen = ({ navigation, route }) => {
         headers: { "Content-Type": "image/jpeg" },
         body: photoBlob,
       });
+      
+      // End of photo-related issue code snippet
 
       const server_response = await response.json();
         

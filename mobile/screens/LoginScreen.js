@@ -27,25 +27,11 @@ const LoginScreen = ({ navigation }) => {
         return;
       }
 
-      const response = await fetch(`${API_SERVER_URL}/mobile/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json'},
-          body: JSON.stringify({
-              student_code: studentCode,
-              session_id: sessionId
-            })
-      });
 
-      const server_response = await response.json();
-        
-      if(!response.ok) {
-        setError(server_response.detail);
-        return;
-      }
 
       navigation.navigate('QRScan', {
-        studentCode: server_response.student_code,
-        sessionId: server_response.session_id,
+        studentCode: studentCode,
+        sessionId: sessionId,
       });
     } catch(e) {
         setError("Error: " + e.message)
