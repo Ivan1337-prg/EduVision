@@ -9,15 +9,21 @@ const TUNNEL_BYPASS_HEADERS = {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method,
-    body: options.body,
-    headers: {
-      ...TUNNEL_BYPASS_HEADERS,
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.headers || {}),
-    },
-  })
+  let response
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method,
+      body: options.body,
+      headers: {
+        ...TUNNEL_BYPASS_HEADERS,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {}),
+      },
+    })
+  } catch (error) {
+    throw new Error(`Cannot reach backend at ${API_BASE_URL}`)
+  }
 
   const contentType = response.headers.get('content-type') || ''
   if (!contentType.includes('application/json')) {
@@ -37,6 +43,10 @@ async function request(path, options = {}) {
   }
 
   return payload
+}
+
+export function checkBackendHealth() {
+  return request('/')
 }
 
 export function loginTeacher(credentials) {

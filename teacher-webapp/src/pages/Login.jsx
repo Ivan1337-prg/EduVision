@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import pictr from './assets/Eduvisionlogo.png'
+import { checkBackendHealth } from '../utils/api.js'
 
 const EMPTY_LOGIN = { email: '', password: '' }
 const EMPTY_REGISTER = { name: '', email: '', password: '' }
@@ -8,6 +9,37 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
   const [mode, setMode] = useState('login')
   const [loginForm, setLoginForm] = useState(EMPTY_LOGIN)
   const [registerForm, setRegisterForm] = useState(EMPTY_REGISTER)
+  const [backendStatus, setBackendStatus] = useState('Checking backend...')
+  const [backendStatusError, setBackendStatusError] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadBackendHealth() {
+      try {
+        const data = await checkBackendHealth()
+        if (cancelled) {
+          return
+        }
+
+        setBackendStatus(data.message || 'backend running')
+        setBackendStatusError(false)
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setBackendStatus(error.message || 'Backend unavailable')
+        setBackendStatusError(true)
+      }
+    }
+
+    loadBackendHealth()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   function updateLoginField(event) {
     const { name, value } = event.target
@@ -52,6 +84,9 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
         <img className="LoginImage" src={pictr} alt="EduVision" />
         <h1 className="auth-title">Teacher Portal</h1>
         <p className="auth-copy">Log in to manage attendance sessions and monitor student check-ins.</p>
+        <p className={`auth-message ${backendStatusError ? 'error' : ''}`}>
+          {backendStatus}
+        </p>
 
         <div className="auth-toggle">
           <button

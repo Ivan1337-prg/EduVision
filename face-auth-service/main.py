@@ -38,7 +38,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "backend running"}
 
 
 @app.post("/session/start-session")
