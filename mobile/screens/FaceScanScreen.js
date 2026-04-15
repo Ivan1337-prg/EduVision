@@ -12,6 +12,18 @@ import { submitFaceValidation } from '../utils/api';
 
 const logoImage = require('../assets/EduVisionLogo.png');
 
+function buildFriendlyStatusMessage(serverResponse) {
+  if (serverResponse?.matched === false) {
+    return 'We could not confidently verify your face. Move into better light, face the camera directly, and try again.';
+  }
+
+  if (serverResponse?.message === 'confirmation too early') {
+    return `Your first check-in was saved. Please come back in ${serverResponse.seconds_until_confirmation} seconds to confirm attendance.`;
+  }
+
+  return serverResponse?.message || 'We could not verify your face. Please try again.';
+}
+
 const FaceScanScreen = ({ navigation, route }) => {
   const { studentCode, studentName, sessionId } = route.params;
   const [hasCameraPermission, requestPermission] = useCameraPermissions();
@@ -55,6 +67,11 @@ const FaceScanScreen = ({ navigation, route }) => {
         imageBlob: photoBlob,
       });
 
+      if (!Array.isArray(serverResponse.attendance)) {
+        setStatusMessage(buildFriendlyStatusMessage(serverResponse));
+        return;
+      }
+
       const attendanceMap = Object.fromEntries(
         serverResponse.attendance.map((row) => [row.student_code, row]),
       );
@@ -79,7 +96,7 @@ const FaceScanScreen = ({ navigation, route }) => {
         message: serverResponse.message,
       });
     } catch (error) {
-      setStatusMessage(`Error: ${error.message}`);
+      setStatusMessage(error.message || 'We could not verify your face. Please try again.');
     } finally {
       setIsCapturing(false);
     }

@@ -1,12 +1,24 @@
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5000'
+const TUNNEL_BYPASS_HEADERS = {
+  Accept: 'application/json',
+  'bypass-tunnel-reminder': 'true',
+}
+
 async function request(path, options = {}) {
-  const response = await fetch(`http://localhost:5000${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method,
     body: options.body,
     headers: {
+      ...TUNNEL_BYPASS_HEADERS,
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
     },
   })
+
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error('The backend tunnel returned an HTML page instead of JSON. Restart the tunnel or refresh the demo URL configuration.')
+  }
 
   const payload = await response.json()
 
