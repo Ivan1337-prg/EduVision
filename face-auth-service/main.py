@@ -10,7 +10,7 @@ from attendance_utils import (
     get_student_by_code,
     seed_attendance_for_session,
 )
-from face_utils import compare_student_face
+from face_utils import compare_face_against_roster, is_confident_roster_match
 import sys
 import uvicorn
 import bcrypt
@@ -243,7 +243,17 @@ async def validate_student_face(session_id: str, student_code: str, request: Req
         ensure_session_exists_and_active(db_cursor, session_id)
         student = get_student_by_code(db_cursor, student_code)
 
-        matched, confidence_score = compare_student_face(image_bytes, student[3])
+        db_cursor.execute(
+            """
+            SELECT id, name, student_code, face_image
+            FROM students
+            WHERE face_image IS NOT NULL
+            """
+        )
+        roster_students = db_cursor.fetchall()
+
+        match_results = compare_face_against_roster(image_bytes, roster_students)
+        matched, confidence_score = is_confident_roster_match(match_results, student[2])
         if not matched:
             return {
                 "message": "face verification failed",

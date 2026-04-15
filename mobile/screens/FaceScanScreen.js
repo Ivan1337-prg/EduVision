@@ -57,7 +57,12 @@ const FaceScanScreen = ({ navigation, route }) => {
         return;
       }
 
-      const photo = await cameraRef.current.takePictureAsync();
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 1,
+        exif: false,
+        skipProcessing: false,
+        shutterSound: false,
+      });
       const photoResponse = await fetch(photo.uri);
       const photoBlob = await photoResponse.blob();
 
