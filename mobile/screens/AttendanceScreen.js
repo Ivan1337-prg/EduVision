@@ -4,7 +4,13 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 const logoImage = require('../assets/EduVisionLogo.png');
 
 const AttendanceScreen = ({ navigation, route }) => {
-  const { studentId, studentName, scanData, scannedAt, locationStatus, locationText } = route.params;
+  const { studentCode, sessionId, locationStatus, locationText, recentScanTimestamp, attendanceStatus } = route.params;
+
+  const faceScanRoute = () => {
+    if (attendanceStatus != 'confirmed') { 
+      navigation.navigate('FaceScan', { studentCode, sessionId })
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -23,28 +29,28 @@ const AttendanceScreen = ({ navigation, route }) => {
         <View style={styles.statusChip}>
           <Text style={styles.statusText}>Checked In</Text>
         </View>
-        <Text style={styles.bigScore}>100%</Text>
-        <Text style={styles.subtitle}>Attendance Confirmed</Text>
+        <Text style={styles.bigScore}>{attendanceStatus === 'confirmed' ? '100%' : '50%'}</Text>
+        <Text style={styles.subtitle}>{attendanceStatus === 'confirmed' ? 'Attendance Confirmed' : 'First Scan Received'}</Text>
       </View>
       <View style={styles.imagePlaceholder}>
         <Text style={styles.imagePlaceholderText}>Verification image</Text>
       </View>
       <View style={styles.infoCard}>
         <Text style={styles.infoLabel}>Check-In Timestamp</Text>
-        <Text style={styles.infoValue}>{scannedAt}</Text>
+        <Text style={styles.infoValue}>{recentScanTimestamp}</Text>
       </View>
       <View style={styles.infoCard}>
         <Text style={styles.infoLabel}>Attendance Status</Text>
-        <Text style={styles.infoValue}>{locationStatus}</Text>
+        <Text style={styles.infoValue}>{attendanceStatus === 'confirmed' ? 'Confirmed' : 'Present'}</Text>
       </View>
       <View style={styles.infoCard}>
         <Text style={styles.infoLabel}>Location Status</Text>
-        <Text style={styles.infoValue}>{locationText}</Text>
+        <Text style={styles.infoValue}>{locationStatus}</Text>
       </View>
       <View style={styles.footerCard}>
         <Text style={styles.footerLabel}>{locationText}</Text>
       </View>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('FaceScan', { studentId, studentName })}>
+      <TouchableOpacity style={styles.button} onPress={faceScanRoute}>
         <Text style={styles.buttonText}>Scan Again</Text>
       </TouchableOpacity>
     </View>

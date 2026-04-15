@@ -17,7 +17,6 @@ import bcrypt
 from dotenv import load_dotenv
 from datetime import datetime
 
-
 load_dotenv()
 app = FastAPI()
 
@@ -456,6 +455,7 @@ async def teacher_login(request: TeacherLoginRequest):
             cursor.close()
         if conn:
             conn.close()
+
 
 
 
