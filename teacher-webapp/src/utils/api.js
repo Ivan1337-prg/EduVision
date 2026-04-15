@@ -33,11 +33,11 @@ async function request(path, options = {}) {
   const payload = await response.json()
 
   if (!response.ok) {
-    const detail = Array.isArray(payload.detail)
+    const detail = Array.isArray(payload?.detail)
       ? payload.detail.map((item) => item.msg || JSON.stringify(item)).join(', ')
-      : payload.detail
+      : payload?.detail
 
-    const error = new Error(detail || payload.message || 'Request failed')
+    const error = new Error(detail || payload?.message || 'Request failed')
     error.status = response.status
     throw error
   }
@@ -46,7 +46,7 @@ async function request(path, options = {}) {
 }
 
 export function checkBackendHealth() {
-  return request('/')
+  return request('/health')
 }
 
 export function loginTeacher(credentials) {

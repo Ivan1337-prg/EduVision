@@ -41,6 +41,11 @@ async def root():
     return {"message": "backend running"}
 
 
+@app.get("/health")
+async def health():
+    return {"message": "backend running"}
+
+
 @app.post("/session/start-session")
 async def start_session(request: Request):
     conn = None
