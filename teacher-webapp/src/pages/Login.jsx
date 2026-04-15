@@ -113,7 +113,7 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
         )}
 
         <p className={`auth-message ${authError ? 'error' : ''}`}>
-          {authError || 'Use the same backend url bruh'}
+          {authError || ''}
         </p>
       </div>
     </section>
