@@ -253,14 +253,24 @@ async def validate_student_face(session_id: str, student_code: str, request: Req
         roster_students = db_cursor.fetchall()
 
         match_results = compare_face_against_roster(image_bytes, roster_students)
-        matched, confidence_score = is_confident_roster_match(match_results, student[2])
+        matched, confidence_score, best_match = is_confident_roster_match(match_results, student[2])
         if not matched:
+            mismatch_reason = "face_mismatch"
+            message = "face verification failed"
+
+            if best_match and best_match["student_code"] != student[2]:
+                mismatch_reason = "student_id_face_mismatch"
+                message = "scanned face does not match the entered student id"
+
             return {
-                "message": "face verification failed",
+                "message": message,
                 "matched": False,
+                "reason": mismatch_reason,
                 "confidence_score": confidence_score,
                 "student_code": student[2],
                 "student_name": student[1],
+                "best_match_student_code": best_match["student_code"] if best_match else None,
+                "best_match_student_name": best_match["student_name"] if best_match else None,
             }
 
         db_cursor.execute(

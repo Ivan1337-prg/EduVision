@@ -13,6 +13,10 @@ import { submitFaceValidation } from '../utils/api';
 const logoImage = require('../assets/EduVisionLogo.png');
 
 function buildFriendlyStatusMessage(serverResponse) {
+  if (serverResponse?.reason === 'student_id_face_mismatch') {
+    return 'The face in the camera does not match the student ID you entered. Check the student ID and try again.';
+  }
+
   if (serverResponse?.matched === false) {
     return 'We could not confidently verify your face. Move into better light, face the camera directly, and try again.';
   }

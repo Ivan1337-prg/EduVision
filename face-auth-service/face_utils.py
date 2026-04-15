@@ -169,16 +169,16 @@ def is_confident_roster_match(match_results, target_student_code: str):
     next_best_result = match_results[1] if len(match_results) > 1 else None
 
     if best_result is None or best_result["student_code"] != target_student_code:
-        return False, target_result["confidence_score"]
+        return False, target_result["confidence_score"], best_result
 
     if target_result["face_distance"] <= MATCH_DISTANCE_THRESHOLD:
-        return True, target_result["confidence_score"]
+        return True, target_result["confidence_score"], best_result
 
     if target_result["face_distance"] > RELAXED_MATCH_DISTANCE_THRESHOLD:
-        return False, target_result["confidence_score"]
+        return False, target_result["confidence_score"], best_result
 
     if next_best_result is None:
-        return True, target_result["confidence_score"]
+        return True, target_result["confidence_score"], best_result
 
     margin = next_best_result["face_distance"] - target_result["face_distance"]
-    return margin >= MIN_DISTANCE_MARGIN, target_result["confidence_score"]
+    return margin >= MIN_DISTANCE_MARGIN, target_result["confidence_score"], best_result
