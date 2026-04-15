@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { API_SERVER_URL } from '@env';
 import {
   View,
   Text,
@@ -11,7 +10,9 @@ import {
   SafeAreaView,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
+import { validateStudentSession } from '../utils/api';
 
 const logoImage = require('../assets/EduVisionLogo.png');
 
@@ -19,23 +20,34 @@ const LoginScreen = ({ navigation }) => {
   const [studentCode, setStudentCode] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     try {
-      if (!studentCode.trim() || !sessionId.trim()) {
+      const normalizedStudentCode = studentCode.trim();
+      const normalizedSessionId = sessionId.trim();
+
+      if (!normalizedStudentCode || !normalizedSessionId) {
         setError('Please enter your student code and class session Id.');
         return;
       }
 
-
-
-      navigation.navigate('QRScan', {
-        studentCode: studentCode,
-        sessionId: sessionId,
+      setIsLoading(true);
+      const response = await validateStudentSession({
+        studentCode: normalizedStudentCode,
+        sessionId: normalizedSessionId,
       });
-    } catch(e) {
-        setError("Error: " + e.message)
-    };
+
+      navigation.navigate('FaceScan', {
+        studentCode: response.student.student_code,
+        studentName: response.student.student_name,
+        sessionId: response.session_id,
+      });
+    } catch (e) {
+      setError(e.message || 'Unable to validate your session.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,16 +64,14 @@ const LoginScreen = ({ navigation }) => {
           >
             <View style={styles.topBar}>
               <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-              <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-                <View style={styles.menuLine} />
-                <View style={styles.menuLine} />
-                <View style={styles.menuLine} />
-              </TouchableOpacity>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Check-In</Text>
+              </View>
             </View>
             <View style={styles.card}>
               <Text style={styles.title}>Student Login</Text>
               <View style={styles.imagePlaceholder}>
-                <Text style={styles.imageText}>Login Illustration</Text>
+                <Text style={styles.imageText}>Use your student ID and session ID</Text>
               </View>
               <Text style={styles.label}>Student Code</Text>
               <TextInput
@@ -90,9 +100,10 @@ const LoginScreen = ({ navigation }) => {
                 autoCorrect={false}
                 returnKeyType="done"
               />
+              <Text style={styles.helperText}>Student IDs: 55 Bryce, 56 Eneojo, 57 Roman, 58 Taras, 59 Taron</Text>
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
-              <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Text style={styles.buttonText}>Go To Scan</Text>
+              <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+                {isLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Continue To Face Scan</Text>}
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -146,19 +157,15 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
   },
-  menuButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: '#ecfdf5',
-    justifyContent: 'center',
-    alignItems: 'center',
+  badge: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#dcfce7',
   },
-  menuLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: '#14532d',
-    marginVertical: 2,
+  badgeText: {
+    color: '#166534',
+    fontWeight: '700',
   },
   imagePlaceholder: {
     height: 160,
@@ -184,12 +191,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     fontSize: 16,
   },
-  linkText: {
-    color: '#166534',
-    textAlign: 'right',
-    marginBottom: 20,
-    fontWeight: '600',
-    letterSpacing: 0.25,
+  helperText: {
+    color: '#475569',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   button: {
     backgroundColor: '#166534',

@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { API_SERVER_URL } from '@env';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,157 +8,83 @@ import {
   Image,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as Location from 'expo-location';
- 
+import { submitFaceValidation } from '../utils/api';
+
 const logoImage = require('../assets/EduVisionLogo.png');
- 
+
 const FaceScanScreen = ({ navigation, route }) => {
-  const { studentCode, sessionId } = route.params;
+  const { studentCode, studentName, sessionId } = route.params;
   const [hasCameraPermission, requestPermission] = useCameraPermissions();
-  const [hasLocationPermission, setHasLocationPermission] = useState(null);
-  const [statusMessage, setStatusMessage] = useState('Ready for facial capture.');
-  const [locationText, setLocationText] = useState('Checking location...');
+  const [statusMessage, setStatusMessage] = useState(`Ready to capture ${studentName}'s face.`);
   const [isCapturing, setIsCapturing] = useState(false);
   const cameraRef = useRef(null);
- 
+
   useEffect(() => {
     requestPermissions();
   }, []);
- 
+
   const requestPermissions = async () => {
     const cameraResult = await requestPermission();
- 
-    if (!cameraResult.granted) {
-      setStatusMessage("Camera access denied.");
-    }
 
-    const locationResult = await Location.requestForegroundPermissionsAsync();
-    setHasLocationPermission(locationResult.status === 'granted');
- 
-    if (locationResult.status === 'granted') {
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-      const formatted = `${location.coords.latitude.toFixed(5)}, ${location.coords.longitude.toFixed(5)}`;
-      setLocationText(`Current location: ${formatted}`);
-    } else {
-      setLocationText('Location permission is required to verify presence in class.');
+    if (!cameraResult.granted) {
+      setStatusMessage('Camera access denied.');
     }
   };
- 
+
   const handleCapture = async () => {
     try {
-      if (isCapturing) return;
-      setIsCapturing(true);
-
-      setStatusMessage('Capturing face...');
-  
-      let locationStatus = 'Unknown';
-      let locationTextCopy = locationText;
-      
-      
-
-      if (hasLocationPermission) {
-        try {
-          const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-          const current = `${location.coords.latitude.toFixed(5)}, ${location.coords.longitude.toFixed(5)}`;
-          locationTextCopy = `Current location: ${current}`;
-          locationStatus = isInClassroom(location.coords.latitude, location.coords.longitude)
-            ? 'In Class'
-            : 'Outside Class';
-        } catch (error) {
-          locationStatus = 'Location unavailable';
-        }
-
-
-      }
-  
-      if (!cameraRef.current) {
-        setStatusMessage('Camera starting up. Try again.')
+      if (isCapturing) {
         return;
       }
 
-      // Image in fetch body sends wrong type, or cant be decoded
+      setIsCapturing(true);
+      setStatusMessage('Capturing and verifying face...');
+
+      if (!cameraRef.current) {
+        setStatusMessage('Camera starting up. Try again.');
+        return;
+      }
+
       const photo = await cameraRef.current.takePictureAsync();
       const photoResponse = await fetch(photo.uri);
-      const photoBlob = await photoResponse.blob()
+      const photoBlob = await photoResponse.blob();
 
-      const response = await fetch(`${API_SERVER_URL}/session/${sessionId}/validate/${studentCode}`, {
-        method: "POST",
-        headers: { "Content-Type": "image/jpeg" },
-        body: photoBlob,
+      const serverResponse = await submitFaceValidation({
+        sessionId,
+        studentCode,
+        imageBlob: photoBlob,
       });
-      
-      // End of photo-related issue code snippet
 
-      const server_response = await response.json();
-        
-      if(!response.ok) {
-        setStatusMessage(server_response.detail);
-        return;
+      const attendanceMap = Object.fromEntries(
+        serverResponse.attendance.map((row) => [row.student_code, row]),
+      );
+      const studentAttendance = attendanceMap[studentCode];
+
+      if (!studentAttendance) {
+        throw new Error('Attendance row not found for this student.');
       }
 
-      const message = server_response.message;
+      const recentAttendanceTimestamp = studentAttendance.fifteen_min_confirm || studentAttendance.first_check_in;
+      const recentScanTimestamp = recentAttendanceTimestamp
+        ? new Date(recentAttendanceTimestamp).toLocaleString()
+        : 'Pending';
 
-      if (message === "face verification failed") {
-        setStatusMessage(`Failed - score: ${server_response.confidence_score}`);
-        return;
-      } else if (message === "confirmation too early") {
-        const seconds = server_response.seconds_until_confirmation;
-        setStatusMessage(`Second scan failed. Try again in ${seconds} seconds.`)
-        return;
-      } else {
-        const attendanceMap = Object.fromEntries(
-          server_response.attendance.map(row => [row.student_code, row])
-        );
-
-        const studentAttendance = attendanceMap[studentCode];
-
-        const firstCheckIn = studentAttendance.first_check_in;
-        const fifteenMinConfirm = studentAttendance.fifteen_min_confirm;
-        const attendanceStatus = studentAttendance.status;
-        let recentScanTimestamp = null;
-
-        if (fifteenMinConfirm === null) {
-          recentScanTimestamp = new Date(firstCheckIn + 'Z').toLocaleTimeString()
-        } else {
-          recentScanTimestamp = new Date(fifteenMinConfirm + 'Z').toLocaleTimeString();
-        }
-
-        navigation.navigate('Attendance', {
-          studentCode,
-          sessionId,
-          locationStatus,
-          locationText: locationTextCopy,
-          recentScanTimestamp: recentScanTimestamp,
-          attendanceStatus: attendanceStatus
-        })
-      }
-
-    } catch (e) {
-      setStatusMessage("Error: " + e.message)
+      navigation.navigate('Attendance', {
+        studentCode,
+        studentName: serverResponse.student_name || studentName,
+        sessionId,
+        recentScanTimestamp,
+        attendanceStatus: studentAttendance.status,
+        confidenceScore: serverResponse.confidence_score,
+        message: serverResponse.message,
+      });
+    } catch (error) {
+      setStatusMessage(`Error: ${error.message}`);
     } finally {
       setIsCapturing(false);
     }
   };
- 
-  const isInClassroom = (latitude, longitude) => {
-    const classLat = 37.4220;
-    const classLon = -122.0841;
-    const distanceMeters = getDistanceFromLatLonInMeters(latitude, longitude, classLat, classLon);
-    return distanceMeters < 300;
-  };
- 
-  const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
-    const toRad = (value) => (value * Math.PI) / 180;
-    const earthRadius = 6371000;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return earthRadius * c;
-  };
- 
+
   if (!hasCameraPermission) {
     return (
       <View style={styles.loadingContainer}>
@@ -168,7 +93,7 @@ const FaceScanScreen = ({ navigation, route }) => {
       </View>
     );
   }
- 
+
   if (!hasCameraPermission.granted) {
     return (
       <View style={styles.messageContainer}>
@@ -176,55 +101,55 @@ const FaceScanScreen = ({ navigation, route }) => {
       </View>
     );
   }
- 
+
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
         <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => navigation.navigate('Audit')}>
-          <View style={styles.menuLine} />
-          <View style={styles.menuLine} />
-          <View style={styles.menuLine} />
-        </TouchableOpacity>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Step 2</Text>
+        </View>
       </View>
-      <Text style={styles.header}>Attendance Scan</Text>
+
+      <Text style={styles.header}>Attendance Face Scan</Text>
+
       <View style={styles.infoRow}>
         <View style={styles.chip}>
-          <Text style={styles.chipText}>Session Active</Text>
+          <Text style={styles.chipText}>{studentName}</Text>
         </View>
         <View style={styles.chipOutline}>
-          <Text style={styles.chipOutlineText}>Location Required</Text>
+          <Text style={styles.chipOutlineText}>Session {sessionId}</Text>
         </View>
       </View>
+
       <View style={styles.scannerWrapper}>
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="front" />
       </View>
-      <Text style={styles.scanHint}>Scan manually or press the camera button to capture.</Text>
+
+      <Text style={styles.scanHint}>Align your face in the frame and capture one clear photo.</Text>
+
       <TouchableOpacity style={styles.scanButton} onPress={handleCapture} disabled={isCapturing}>
-        <Text style={styles.scanButtonIcon}>📷</Text>
+        {isCapturing ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.scanButtonText}>Capture Face</Text>
+        )}
       </TouchableOpacity>
+
       <Text style={styles.status}>{statusMessage}</Text>
-      <Text style={styles.location}>{locationText}</Text>
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.goBack()}>
+
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Login')}>
         <Text style={styles.secondaryText}>Back to Login</Text>
       </TouchableOpacity>
     </View>
   );
 };
- 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ecfdf5',
     padding: 20,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 16,
-    color: '#14532d',
-    letterSpacing: 0.2,
   },
   topBar: {
     flexDirection: 'row',
@@ -243,25 +168,61 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
   },
-  menuButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: '#ecfdf5',
-    justifyContent: 'center',
-    alignItems: 'center',
+  badge: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#dcfce7',
   },
-  menuLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: '#14532d',
-    marginVertical: 2,
+  badgeText: {
+    color: '#166534',
+    fontWeight: '700',
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 16,
+    color: '#14532d',
+    letterSpacing: 0.2,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 14,
+  },
+  chip: {
+    flex: 1,
+    backgroundColor: '#d1fae5',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  chipText: {
+    color: '#14532d',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  chipOutline: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#86efac',
+    backgroundColor: '#ffffff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  chipOutlineText: {
+    color: '#166534',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   scannerWrapper: {
     flex: 1,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#d1fae5',
@@ -274,10 +235,10 @@ const styles = StyleSheet.create({
   },
   scanButton: {
     alignSelf: 'center',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ffffff',
+    minWidth: 160,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#166534',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#14532d',
@@ -287,32 +248,16 @@ const styles = StyleSheet.create({
     elevation: 10,
     marginBottom: 14,
   },
-  scanButtonIcon: {
-    fontSize: 32,
+  scanButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   status: {
     color: '#166534',
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  location: {
-    color: '#334155',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 18,
-  },
-  captureButton: {
-    backgroundColor: '#166534',
-    paddingVertical: 16,
-    borderRadius: 18,
-    alignItems: 'center',
     marginBottom: 12,
-  },
-  captureText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
   },
   secondaryButton: {
     alignItems: 'center',
@@ -322,32 +267,6 @@ const styles = StyleSheet.create({
     color: '#166534',
     fontSize: 15,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  chip: {
-    backgroundColor: '#d1fae5',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  chipText: {
-    color: '#14532d',
-    fontWeight: '700',
-  },
-  chipOutline: {
-    borderWidth: 1,
-    borderColor: '#14532d',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  chipOutlineText: {
-    color: '#14532d',
-    fontWeight: '700',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -355,9 +274,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: 12,
     color: '#14532d',
+    fontSize: 16,
   },
   messageContainer: {
     flex: 1,
@@ -367,10 +286,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5',
   },
   messageText: {
-    fontSize: 16,
-    color: '#334155',
+    color: '#14532d',
     textAlign: 'center',
+    fontSize: 16,
   },
 });
- 
+
 export default FaceScanScreen;

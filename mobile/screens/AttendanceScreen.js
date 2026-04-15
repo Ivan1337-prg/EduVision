@@ -3,55 +3,70 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
 const logoImage = require('../assets/EduVisionLogo.png');
 
-const AttendanceScreen = ({ navigation, route }) => {
-  const { studentCode, sessionId, locationStatus, locationText, recentScanTimestamp, attendanceStatus } = route.params;
-
-  const faceScanRoute = () => {
-    if (attendanceStatus != 'confirmed') { 
-      navigation.navigate('FaceScan', { studentCode, sessionId })
-    }
+function formatConfidence(confidenceScore) {
+  if (typeof confidenceScore !== 'number') {
+    return 'N/A';
   }
+
+  return `${Math.round(confidenceScore * 100)}%`;
+}
+
+const AttendanceScreen = ({ navigation, route }) => {
+  const {
+    studentCode,
+    studentName,
+    sessionId,
+    recentScanTimestamp,
+    attendanceStatus,
+    confidenceScore,
+    message,
+  } = route.params;
+
+  const normalizedStatus = attendanceStatus === 'confirmed' ? 'Confirmed' : 'Present';
 
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
         <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => navigation.navigate('Audit')}>
-          <View style={styles.menuLine} />
-          <View style={styles.menuLine} />
-          <View style={styles.menuLine} />
-        </TouchableOpacity>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Step 3</Text>
+        </View>
       </View>
+
       <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>Attendance Record</Text>
+        <Text style={styles.headerTitle}>Attendance Recorded</Text>
       </View>
+
       <View style={styles.card}>
         <View style={styles.statusChip}>
-          <Text style={styles.statusText}>Checked In</Text>
+          <Text style={styles.statusText}>{normalizedStatus}</Text>
         </View>
-        <Text style={styles.bigScore}>{attendanceStatus === 'confirmed' ? '100%' : '50%'}</Text>
-        <Text style={styles.subtitle}>{attendanceStatus === 'confirmed' ? 'Attendance Confirmed' : 'First Scan Received'}</Text>
+        <Text style={styles.bigScore}>{formatConfidence(confidenceScore)}</Text>
+        <Text style={styles.subtitle}>{message}</Text>
       </View>
-      <View style={styles.imagePlaceholder}>
-        <Text style={styles.imagePlaceholderText}>Verification image</Text>
-      </View>
+
       <View style={styles.infoCard}>
-        <Text style={styles.infoLabel}>Check-In Timestamp</Text>
+        <Text style={styles.infoLabel}>Student</Text>
+        <Text style={styles.infoValue}>{studentName} ({studentCode})</Text>
+      </View>
+
+      <View style={styles.infoCard}>
+        <Text style={styles.infoLabel}>Session ID</Text>
+        <Text style={styles.infoValue}>{sessionId}</Text>
+      </View>
+
+      <View style={styles.infoCard}>
+        <Text style={styles.infoLabel}>Timestamp</Text>
         <Text style={styles.infoValue}>{recentScanTimestamp}</Text>
       </View>
+
       <View style={styles.infoCard}>
         <Text style={styles.infoLabel}>Attendance Status</Text>
-        <Text style={styles.infoValue}>{attendanceStatus === 'confirmed' ? 'Confirmed' : 'Present'}</Text>
+        <Text style={styles.infoValue}>{normalizedStatus}</Text>
       </View>
-      <View style={styles.infoCard}>
-        <Text style={styles.infoLabel}>Location Status</Text>
-        <Text style={styles.infoValue}>{locationStatus}</Text>
-      </View>
-      <View style={styles.footerCard}>
-        <Text style={styles.footerLabel}>{locationText}</Text>
-      </View>
-      <TouchableOpacity style={styles.button} onPress={faceScanRoute}>
-        <Text style={styles.buttonText}>Scan Again</Text>
+
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Login')}>
+        <Text style={styles.buttonText}>Back to Login</Text>
       </TouchableOpacity>
     </View>
   );
@@ -80,19 +95,15 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
   },
-  menuButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: '#ecfdf5',
-    justifyContent: 'center',
-    alignItems: 'center',
+  badge: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#dcfce7',
   },
-  menuLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: '#14532d',
-    marginVertical: 2,
+  badgeText: {
+    color: '#166534',
+    fontWeight: '700',
   },
   headerBar: {
     marginBottom: 16,
@@ -128,7 +139,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   bigScore: {
-    fontSize: 62,
+    fontSize: 48,
     fontWeight: '800',
     color: '#166534',
   },
@@ -136,22 +147,10 @@ const styles = StyleSheet.create({
     color: '#475569',
     marginTop: 8,
     fontSize: 16,
-  },
-  imagePlaceholder: {
-    backgroundColor: '#d1fae5',
-    borderRadius: 24,
-    height: 220,
-    marginBottom: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholderText: {
-    color: '#14532d',
-    fontSize: 16,
-    fontWeight: '700',
+    textAlign: 'center',
   },
   infoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 18,
     marginBottom: 14,
@@ -170,26 +169,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0f172a',
   },
-  footerCard: {
-    marginTop: 8,
-    marginBottom: 22,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 18,
-    padding: 16,
-  },
-  footerLabel: {
-    color: '#334155',
-    fontSize: 14,
-    textAlign: 'center',
-  },
   button: {
     backgroundColor: '#166534',
     paddingVertical: 16,
     borderRadius: 18,
     alignItems: 'center',
+    marginTop: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
   },

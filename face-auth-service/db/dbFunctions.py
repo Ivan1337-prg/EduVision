@@ -6,6 +6,13 @@ from psycopg2.extras import execute_values
 
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+MOCK_STUDENTS = [
+    ("Bryce", "55"),
+    ("Eneojo", "56"),
+    ("Roman", "57"),
+    ("Taras", "58"),
+    ("Taron", "59"),
+]
 
 
 def parse_student_identity(filename_stem):
@@ -115,6 +122,7 @@ def bootstrap_db():
             """
         )
 
+        seed_mock_students(db_cursor)
         seed_student_faces(db_cursor)
 
         conn.commit()
@@ -178,6 +186,19 @@ def seed_student_faces(db_cursor):
             face_image_filename = EXCLUDED.face_image_filename
         """,
         rows,
+    )
+
+
+def seed_mock_students(db_cursor):
+    execute_values(
+        db_cursor,
+        """
+        INSERT INTO students (name, student_code)
+        VALUES %s
+        ON CONFLICT (student_code) DO UPDATE SET
+            name = EXCLUDED.name
+        """,
+        MOCK_STUDENTS,
     )
 
 

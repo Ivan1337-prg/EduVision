@@ -179,6 +179,57 @@ async def get_session_attendance(session_id: str):
             conn.close()
 
 
+@app.get("/session/{session_id}/student/{student_code}")
+async def validate_student_session(session_id: str, student_code: str):
+    conn = None
+    db_cursor = None
+
+    try:
+        conn = connect_to_postgres()
+        db_cursor = conn.cursor()
+
+        ensure_session_exists_and_active(db_cursor, session_id)
+        student = get_student_by_code(db_cursor, student_code)
+
+        db_cursor.execute(
+            """
+            SELECT id, first_check_in, fifteen_min_confirm
+            FROM attendance
+            WHERE session_id = %s AND student_id = %s
+            """,
+            (session_id, student[0])
+        )
+        attendance_row = db_cursor.fetchone()
+
+        return {
+            "message": "student and session verified",
+            "session_id": session_id,
+            "student": {
+                "student_id": str(student[0]),
+                "student_name": student[1],
+                "student_code": student[2],
+            },
+            "attendance": {
+                "attendance_id": str(attendance_row[0]) if attendance_row else None,
+                "first_check_in": attendance_row[1].isoformat() if attendance_row and attendance_row[1] else None,
+                "fifteen_min_confirm": attendance_row[2].isoformat() if attendance_row and attendance_row[2] else None,
+                "status": "confirmed" if attendance_row and attendance_row[2] else "present" if attendance_row and attendance_row[1] else "pending",
+            },
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"server problem {e}")
+
+    finally:
+        if db_cursor:
+            db_cursor.close()
+        if conn:
+            conn.close()
+
+
 @app.post("/session/{session_id}/validate/{student_code}")
 async def validate_student_face(session_id: str, student_code: str, request: Request):
     conn = None
@@ -271,6 +322,7 @@ async def validate_student_face(session_id: str, student_code: str, request: Req
             "confidence_score": confidence_score,
             "student_code": student[2],
             "student_name": student[1],
+            "student_id": str(student[0]),
             "session_id": session_id,
             "attendance": fetch_session_attendance_rows(db_cursor, session_id),
         }
