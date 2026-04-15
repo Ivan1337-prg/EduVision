@@ -1,4 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5000'
+const API_BASE_URL = (
+  import.meta.env.VITE_API_SERVER_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  'http://localhost:5000'
+).replace(/\/$/, '')
 const TUNNEL_BYPASS_HEADERS = {
   Accept: 'application/json',
   'bypass-tunnel-reminder': 'true',
