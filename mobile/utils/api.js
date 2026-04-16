@@ -41,12 +41,12 @@ function buildCandidateBaseUrls() {
   const candidateBaseUrls = [];
   const devServerHost = getDevServerHost();
 
-  if (isReachableLanHost(devServerHost)) {
-    candidateBaseUrls.push(`http://${devServerHost}:5000`);
-  }
-
   if (API_SERVER_URL) {
     candidateBaseUrls.push(API_SERVER_URL);
+  }
+
+  if (isReachableLanHost(devServerHost)) {
+    candidateBaseUrls.push(`http://${devServerHost}:5000`);
   }
 
   if (Platform.OS === 'android') {
