@@ -73,7 +73,7 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
     event.preventDefault()
     onRegister({
       ...registerForm,
-      name: registerForm.name.trim(),
+      name: registerForm.name.trim().replace(/\s+/g, ' '),
       email: registerForm.email.trim().toLowerCase(),
     })
   }
