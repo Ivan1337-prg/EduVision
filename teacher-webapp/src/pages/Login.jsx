@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import pictr from './assets/Eduvisionlogo.png'
-import { checkBackendHealth } from '../utils/api.js'
 
 const EMPTY_LOGIN = { email: '', password: '' }
 const EMPTY_REGISTER = { name: '', email: '', password: '' }
@@ -9,73 +8,25 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
   const [mode, setMode] = useState('login')
   const [loginForm, setLoginForm] = useState(EMPTY_LOGIN)
   const [registerForm, setRegisterForm] = useState(EMPTY_REGISTER)
-  const [backendStatus, setBackendStatus] = useState('Checking backend...')
-  const [backendStatusError, setBackendStatusError] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadBackendHealth() {
-      try {
-        const data = await checkBackendHealth()
-        if (cancelled) {
-          return
-        }
-
-        setBackendStatus(data.message || 'backend running')
-        setBackendStatusError(false)
-      } catch (error) {
-        if (cancelled) {
-          return
-        }
-
-        setBackendStatus(error.message || 'Backend unavailable')
-        setBackendStatusError(true)
-      }
-    }
-
-    loadBackendHealth()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   function updateLoginField(event) {
     const { name, value } = event.target
-    const nextValue = name === 'email' ? value.replace(/\s+/g, '') : value
-    setLoginForm((current) => ({ ...current, [name]: nextValue }))
+    setLoginForm((current) => ({ ...current, [name]: value }))
   }
 
   function updateRegisterField(event) {
     const { name, value } = event.target
-    const nextValue = name === 'email' ? value.replace(/\s+/g, '') : value
-    setRegisterForm((current) => ({ ...current, [name]: nextValue }))
-  }
-
-  function handleEmailInvalid(event) {
-    event.target.setCustomValidity('Please enter a valid email address.')
-  }
-
-  function clearFieldValidation(event) {
-    event.target.setCustomValidity('')
+    setRegisterForm((current) => ({ ...current, [name]: value }))
   }
 
   function submitLogin(event) {
     event.preventDefault()
-    onLogin({
-      ...loginForm,
-      email: loginForm.email.trim().toLowerCase(),
-    })
+    onLogin(loginForm)
   }
 
   function submitRegister(event) {
     event.preventDefault()
-    onRegister({
-      ...registerForm,
-      name: registerForm.name.trim().replace(/\s+/g, ' '),
-      email: registerForm.email.trim().toLowerCase(),
-    })
+    onRegister(registerForm)
   }
 
   return (
@@ -84,9 +35,6 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
         <img className="LoginImage" src={pictr} alt="EduVision" />
         <h1 className="auth-title">Teacher Portal</h1>
         <p className="auth-copy">Log in to manage attendance sessions and monitor student check-ins.</p>
-        <p className={`auth-message ${backendStatusError ? 'error' : ''}`}>
-          {backendStatus}
-        </p>
 
         <div className="auth-toggle">
           <button
@@ -114,9 +62,6 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
               type="email"
               value={loginForm.email}
               onChange={updateLoginField}
-              onInput={clearFieldValidation}
-              onInvalid={handleEmailInvalid}
-              autoComplete="email"
               required
             />
             <input
@@ -150,9 +95,6 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
               type="email"
               value={registerForm.email}
               onChange={updateRegisterField}
-              onInput={clearFieldValidation}
-              onInvalid={handleEmailInvalid}
-              autoComplete="email"
               required
             />
             <input
@@ -171,7 +113,7 @@ function Login({ authError, authLoading, onLogin, onRegister }) {
         )}
 
         <p className={`auth-message ${authError ? 'error' : ''}`}>
-          {authError || ''}
+          {authError || 'Use the same backend url bruh'}
         </p>
       </div>
     </section>

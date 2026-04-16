@@ -215,7 +215,6 @@ body {
 .auth-form {
   display: grid;
   gap: 12px;
-  justify-items: center;
 }
 
 .auth-message {
@@ -232,9 +231,9 @@ body {
 /* Inputs */
 .email,
 .Password {
-  width: min(250px, 100%);
+  width: 250px;
   padding: 12px;
-  margin: 10px 0;
+  margin: 10px auto;
   display: block;
   border-radius: 12px;
   border: black 1px solid;
@@ -244,9 +243,7 @@ body {
 
 /* Login Button */
 .Login-button {
-  width: min(250px, 100%);
   padding: 12px;
-  margin: 10px 0 0;
   border-radius: 12px;
   border: none;
   background: #10b981;
@@ -254,6 +251,9 @@ body {
   font-weight: bold;
   cursor: pointer;
   transition: 0.2s;
+
+  width: 30%;
+
 }
 
 .Login-button:hover {
