@@ -38,6 +38,20 @@ def log_student_auth_step(message: str, *, session_id: str | None = None, studen
     print(" | ".join(log_parts), flush=True)
 
 
+def log_teacher_signup_step(message: str, *, teacher_name: str | None = None, teacher_email: str | None = None):
+    log_parts = [
+        f"[teacher-signup] {datetime.utcnow().isoformat(timespec='seconds')}",
+        message,
+    ]
+
+    if teacher_name:
+        log_parts.append(f"teacher_name={teacher_name}")
+    if teacher_email:
+        log_parts.append(f"teacher_email={teacher_email}")
+
+    print(" | ".join(log_parts), flush=True)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -572,20 +586,46 @@ async def teacher_signup(request: TeacherRegisterRequest):
     db_cursor = None
 
     try:
+        log_teacher_signup_step(
+            "Teacher account creation started.",
+            teacher_name=request.name,
+            teacher_email=request.email.lower(),
+        )
         conn = connect_to_postgres()
         db_cursor = conn.cursor()
+        log_teacher_signup_step(
+            "Database connection opened for teacher signup.",
+            teacher_name=request.name,
+            teacher_email=request.email.lower(),
+        )
 
         db_cursor.execute(
             "SELECT id FROM teachers WHERE email = %s",
             (request.email.lower(),)
         )
         if db_cursor.fetchone():
+            log_teacher_signup_step(
+                "Teacher signup failed because the email is already registered.",
+                teacher_name=request.name,
+                teacher_email=request.email.lower(),
+            )
             raise HTTPException(status_code=400, detail="email already registered")
+
+        log_teacher_signup_step(
+            "Teacher email is available. Hashing password now.",
+            teacher_name=request.name,
+            teacher_email=request.email.lower(),
+        )
 
         hashed_password = bcrypt.hashpw(
             request.password.encode("utf-8"),
             bcrypt.gensalt()
         ).decode("utf-8")
+        log_teacher_signup_step(
+            "Password hashed successfully. Creating teacher account record.",
+            teacher_name=request.name,
+            teacher_email=request.email.lower(),
+        )
 
         db_cursor.execute(
             """
@@ -596,16 +636,31 @@ async def teacher_signup(request: TeacherRegisterRequest):
         )
 
         conn.commit()
+        log_teacher_signup_step(
+            "Teacher account created successfully.",
+            teacher_name=request.name,
+            teacher_email=request.email.lower(),
+        )
         return {"message": "success account signed up"}
 
-    except HTTPException:
+    except HTTPException as exc:
         if conn:
             conn.rollback()
+        log_teacher_signup_step(
+            f"Teacher signup request failed: {exc.detail}",
+            teacher_name=request.name,
+            teacher_email=request.email.lower(),
+        )
         raise
 
-    except Exception:
+    except Exception as exc:
         if conn:
             conn.rollback()
+        log_teacher_signup_step(
+            f"Teacher signup crashed: {exc}",
+            teacher_name=request.name,
+            teacher_email=request.email.lower(),
+        )
         raise HTTPException(status_code=500, detail="server problem")
 
     finally:
