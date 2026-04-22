@@ -24,6 +24,6 @@ Diana Rabah
 **TA**:
 Jordan Christopher Black
 
-**Capstone 2 Improvements:**
+## Capstone 2 Improvements:
 - Improve Face Recognition System
 - Add Use of IP to Avoid Fake Scan 
