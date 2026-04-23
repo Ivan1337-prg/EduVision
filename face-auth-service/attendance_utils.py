@@ -71,14 +71,13 @@ def ensure_session_exists_and_active(db_cursor, session_id: str):
 
 
 def get_student_by_code(db_cursor, student_code: str):
-    normalized_student_code = student_code.strip().upper()
     db_cursor.execute(
         """
         SELECT id, name, student_code, face_image
         FROM students
         WHERE student_code = %s
         """,
-        (normalized_student_code,)
+        (student_code.upper(),)
     )
     student = db_cursor.fetchone()
 

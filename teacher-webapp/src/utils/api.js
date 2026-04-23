@@ -1,29 +1,19 @@
-const API_BASE_URL = (
-  import.meta.env.VITE_API_SERVER_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  'http://localhost:5000'
-).replace(/\/$/, '')
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5000'
 const TUNNEL_BYPASS_HEADERS = {
   Accept: 'application/json',
   'bypass-tunnel-reminder': 'true',
 }
 
 async function request(path, options = {}) {
-  let response
-
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      method: options.method,
-      body: options.body,
-      headers: {
-        ...TUNNEL_BYPASS_HEADERS,
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(options.headers || {}),
-      },
-    })
-  } catch (error) {
-    throw new Error(`Cannot reach backend at ${API_BASE_URL}`)
-  }
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: options.method,
+    body: options.body,
+    headers: {
+      ...TUNNEL_BYPASS_HEADERS,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
+  })
 
   const contentType = response.headers.get('content-type') || ''
   if (!contentType.includes('application/json')) {
@@ -33,20 +23,16 @@ async function request(path, options = {}) {
   const payload = await response.json()
 
   if (!response.ok) {
-    const detail = Array.isArray(payload?.detail)
+    const detail = Array.isArray(payload.detail)
       ? payload.detail.map((item) => item.msg || JSON.stringify(item)).join(', ')
-      : payload?.detail
+      : payload.detail
 
-    const error = new Error(detail || payload?.message || 'Request failed')
+    const error = new Error(detail || payload.message || 'Request failed')
     error.status = response.status
     throw error
   }
 
   return payload
-}
-
-export function checkBackendHealth() {
-  return request('/health')
 }
 
 export function loginTeacher(credentials) {
