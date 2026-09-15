@@ -68,15 +68,18 @@ const LoginScreen = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.topBar}>
-              <Image source={logoImage} style={styles.logo} resizeMode="contain" />
+              <Image source={logoImage} style={styles.logo} resizeMode="contain" accessibilityLabel="EduVision" />
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>Check-In</Text>
               </View>
             </View>
             <View style={styles.card}>
               <Text style={styles.title}>Student Login</Text>
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imageText}>Use your student ID and session ID</Text>
+              <View style={styles.welcomeCard}>
+                <View pointerEvents="none" accessible={false} style={styles.welcomeCircleTop} />
+                <View pointerEvents="none" accessible={false} style={styles.welcomeCircleBottom} />
+                <Text style={styles.welcomeTitle}>Ready to check in?</Text>
+                <Text style={styles.welcomeText}>Enter your student code and session ID below.</Text>
               </View>
               <Text style={styles.label}>Student Code</Text>
               <TextInput
@@ -105,7 +108,6 @@ const LoginScreen = ({ navigation }) => {
                 autoCorrect={false}
                 returnKeyType="done"
               />
-              <Text style={styles.helperText}>Student IDs: 55 Bryce, 56 Eneojo, 57 Roman, 58 Taras, 59 Taron</Text>
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
               <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
                 {isLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Continue To Face Scan</Text>}
@@ -159,8 +161,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   logo: {
-    width: 76,
-    height: 76,
+    width: 140,
+    height: 88,
+    flexShrink: 1,
   },
   badge: {
     paddingHorizontal: 16,
@@ -172,18 +175,57 @@ const styles = StyleSheet.create({
     color: '#166534',
     fontWeight: '700',
   },
-  imagePlaceholder: {
-    height: 160,
+  welcomeCard: {
+    minHeight: 128,
     borderRadius: 22,
-    backgroundColor: '#d1fae5',
+    backgroundColor: '#e6f8ed',
+    borderWidth: 1,
+    borderColor: '#d1efdd',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     marginBottom: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  imageText: {
+  welcomeCircleTop: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#d5f0df',
+    top: -65,
+    right: -40,
+  },
+  welcomeCircleBottom: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 16,
+    borderColor: '#d5f0df',
+    bottom: -64,
+    left: -35,
+  },
+  welcomeTitle: {
     color: '#115e30',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  welcomeText: {
+    color: '#3f6650',
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+    maxWidth: 240,
+  },
+  label: {
+    color: '#243e2e',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   input: {
     height: 56,
@@ -195,12 +237,6 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     backgroundColor: '#f8fafc',
     fontSize: 16,
-  },
-  helperText: {
-    color: '#475569',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: 16,
   },
   button: {
     backgroundColor: '#166534',
