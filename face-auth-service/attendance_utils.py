@@ -8,7 +8,7 @@ DEVICE_TOKEN_ALREADY_USED_DETAIL = "device already linked to another student for
 def get_active_session_for_teacher(db_cursor, teacher_id: str):
     db_cursor.execute(
         """
-        SELECT id, teacher_id, start_time, end_time, status
+        SELECT id, teacher_id, start_time, end_time, status, session_code
         FROM class_sessions
         WHERE teacher_id = %s AND status = 'active'
         ORDER BY start_time DESC
@@ -58,9 +58,9 @@ def ensure_session_exists_and_active(db_cursor, session_id: str):
         """
         SELECT id, status, latitude, longitude, radius_meters
         FROM class_sessions
-        WHERE id = %s
+        WHERE id::text = %s OR session_code = %s
         """,
-        (session_id,)
+        (session_id, session_id)
     )
     session_row = db_cursor.fetchone()
 

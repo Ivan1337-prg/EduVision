@@ -83,7 +83,7 @@ function Session({ onEndSession, onStartSession, session, sessionLoading, sessio
   return (
     <section className="card session-card">
       <h2 className="currentSession">Current Session: {sessionActive ? 'Active' : 'Inactive'}</h2>
-      <p><strong>Session ID:</strong> {session?.session_id ?? 'Not started yet'}</p>
+      <p><strong>Session Code:</strong> {session?.session_code ?? 'Not started yet'}</p>
       <p><strong>Status:</strong> {session?.status ?? 'inactive'}</p>
       <p><strong>Started At:</strong> {session?.start_time ?? 'N/A'}</p>
       {sessionMessage ? <p className="session-message">{sessionMessage}</p> : null}

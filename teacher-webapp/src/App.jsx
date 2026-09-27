@@ -151,6 +151,7 @@ function App() {
       const data = await startSessionRequest(authToken, sessionLocation)
       setSession({
         session_id: data.session_id,
+session_code: data.session_code,   
         status: data.status,
         start_time: data.start_time ?? session?.start_time ?? null,
         latitude: data.latitude,
