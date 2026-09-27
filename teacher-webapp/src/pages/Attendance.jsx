@@ -2,11 +2,9 @@ import { useMemo, useState } from 'react'
 import AttendanceTable from '../utils/AttendanceTable.jsx'
 import Cards from '../components/cards.jsx'
 
-
 function Attendance({ attendance, session, sessionLoading, sessionMessage, setAttendance }) {
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState('view')
-
 
 
   const filteredAttendance = useMemo(() => {
@@ -46,33 +44,44 @@ function Attendance({ attendance, session, sessionLoading, sessionMessage, setAt
 
   return (
     <div>
-      <h1>Attendance</h1>
+      <div className="page-heading">
+        <div><p className="eyebrow">Every student, accounted for</p><h1>Attendance Dashboard</h1><p className="page-copy">Follow your class check-ins as they happen.</p></div>
+        <button className="manage-button" onClick={() => setMode(mode === 'manage' ? 'view' : 'manage')} aria-pressed={mode === 'manage'}>
+          {mode === 'view' ? 'Manage Attendance' : 'Finish editing'}
+        </button>
+      </div>
 
       <div className="session-summary card">
         <p><strong>Session:</strong> {session?.session_id ?? 'No active session'}</p>
         <p><strong>Status:</strong> {session?.status ?? 'inactive'}</p>
-        <p><strong>Updated:</strong> {sessionLoading ? 'Refreshing...' : 'Live every 5 seconds'}</p>
+        <p><strong>Updates:</strong> {sessionLoading ? 'Refreshing...' : session ? 'Live every 5 seconds' : 'Start a session to receive check-ins'}</p>
         {sessionMessage ? <p className="session-message">{sessionMessage}</p> : null}
       </div>
 
-      <Cards text="Total Students" num={totals.total} />
-      <Cards text="Present Today" num={totals.present} />
-      <Cards text="Awaiting Confirm" num={totals.awaitingConfirm} />
-      <Cards text="Pending" num={totals.absent} />
-
-      <div className="search-container">
-        <input
-          className="search"
-          placeholder="Search by student name or number"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+      <div className="stats-grid">
+        <Cards text="Total Students" num={totals.total} />
+        <Cards text="Present Today" num={totals.present} />
+        <Cards text="Awaiting Confirm" num={totals.awaitingConfirm} />
+        <Cards text="Pending" num={totals.absent} />
       </div>
-      <button className="manage-button" onClick ={() => setMode(mode === 'manage' ? 'view' : 'manage')}>
-        {mode === 'view' ? 'Manage Attendance' : 'Finish'}
-      </button>
 
-      <AttendanceTable students={filteredAttendance} mode={mode} setAttendance={setAttendance} />
+      <section className="roster-panel" aria-label="Student attendance">
+        <div className="search-container">
+          <div><h2>Student roster</h2><p className="page-copy">{filteredAttendance.length} of {attendance.length} students</p></div>
+          <label className="roster-search"><span className="sr-only">Search students</span>
+          <input
+            className="search"
+            placeholder="Search by student name or number"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          </label>
+        </div>
+        {mode === 'manage' && <p className="edit-note" role="status">Status edits are temporary and may be replaced by the next live update.</p>}
+
+        <AttendanceTable students={filteredAttendance} mode={mode} setAttendance={setAttendance}
+          emptyMessage={query ? 'No students match your search.' : session ? 'Student records will appear here when available.' : 'Start a session from the dashboard to see your student roster.'} />
+      </section>
     </div>
   )
 }

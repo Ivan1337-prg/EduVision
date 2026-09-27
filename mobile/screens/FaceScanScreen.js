@@ -6,7 +6,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { getAttendanceErrorMessage, submitFaceValidation } from '../utils/api';
 import { getCurrentAttendanceLocation } from '../utils/location';
@@ -34,7 +36,7 @@ function buildFriendlyStatusMessage(serverResponse) {
 const FaceScanScreen = ({ navigation, route }) => {
   const { studentCode, studentName, sessionId } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
-  const [statusMessage, setStatusMessage] = useState(`Ready to capture ${studentName}'s face.`);
+  const [statusMessage, setStatusMessage] = useState('');
   const [livenessPromptIndex, setLivenessPromptIndex] = useState(0);
   const [livenessComplete, setLivenessComplete] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -64,7 +66,7 @@ const FaceScanScreen = ({ navigation, route }) => {
   }, [livenessComplete, livenessPromptIndex, permission?.granted]);
 
   const livenessMessage = livenessComplete
-    ? 'Liveness prompts complete. Capture your face.'
+    ? 'Face the camera in good lighting, then capture your photo.'
     : LIVENESS_PROMPTS[livenessPromptIndex];
 
   const handleCapture = async () => {
@@ -160,58 +162,67 @@ const FaceScanScreen = ({ navigation, route }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topBar}>
-        <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Step 2</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.topBar}>
+          <Image source={logoImage} style={styles.logo} resizeMode="contain" accessibilityLabel="EduVision" />
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>Step 2</Text>
+          </View>
         </View>
-      </View>
 
-      <Text style={styles.header}>Attendance Face Scan</Text>
+        <Text style={styles.header}>Attendance Face Scan</Text>
 
-      <View style={styles.infoRow}>
-        <View style={styles.chip}>
-          <Text style={styles.chipText}>{studentName}</Text>
+        <View style={styles.infoRow}>
+          <View style={styles.chip}>
+            <Text style={styles.infoLabel}>Student Name</Text>
+            <Text style={styles.chipText}>{studentName}</Text>
+          </View>
+          <View style={styles.chipOutline}>
+            <Text style={styles.infoLabel}>Session</Text>
+            <Text selectable style={styles.chipOutlineText}>{sessionId}</Text>
+          </View>
         </View>
-        <View style={styles.chipOutline}>
-          <Text style={styles.chipOutlineText}>Session {sessionId}</Text>
+
+        <View style={styles.scannerWrapper}>
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFillObject}
+            facing="front"
+            mode="picture"
+            onMountError={(error) => setStatusMessage(error?.message || 'Camera error. Try again.')}
+          />
         </View>
-      </View>
 
-      <View style={styles.scannerWrapper}>
-        <CameraView
-          ref={cameraRef}
-          style={StyleSheet.absoluteFillObject}
-          facing="front"
-          mode="picture"
-          onMountError={(error) => setStatusMessage(error?.message || 'Camera error. Try again.')}
-        />
-        <View style={styles.livenessOverlay}>
-          <Text style={styles.livenessText}>{livenessMessage}</Text>
-        </View>
-      </View>
+        <Text accessibilityLiveRegion="polite" style={styles.scanHint}>
+          {livenessMessage}
+        </Text>
 
-      <Text style={styles.scanHint}>Move your head when prompted, then capture one clear photo.</Text>
+        <TouchableOpacity
+          style={[styles.scanButton, (!livenessComplete || isCapturing) && styles.scanButtonDisabled]}
+          onPress={handleCapture}
+          disabled={isCapturing || !livenessComplete}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isCapturing || !livenessComplete, busy: isCapturing }}
+        >
+          {isCapturing ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text style={styles.scanButtonText}>Capture Face</Text>
+          )}
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.scanButton, (!livenessComplete || isCapturing) && styles.scanButtonDisabled]}
-        onPress={handleCapture}
-        disabled={isCapturing || !livenessComplete}
-      >
-        {isCapturing ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.scanButtonText}>Capture Face</Text>
-        )}
-      </TouchableOpacity>
+        <Text accessibilityLiveRegion="polite" style={styles.status}>
+          {statusMessage || (livenessComplete
+            ? 'Ready to capture. Your location will be checked next.'
+            : 'Follow the head-movement prompts to get ready.')}
+        </Text>
 
-      <Text style={styles.status}>{statusMessage}</Text>
-
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.secondaryText}>Back to Login</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity accessibilityRole="button" style={styles.secondaryButton} onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.secondaryText}>Back to Login</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -219,7 +230,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ecfdf5',
+  },
+  content: {
     padding: 20,
+    paddingBottom: 12,
   },
   topBar: {
     flexDirection: 'row',
@@ -235,8 +249,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   logo: {
-    width: 72,
-    height: 72,
+    width: 140,
+    height: 88,
+    flexShrink: 1,
   },
   badge: {
     paddingHorizontal: 16,
@@ -252,7 +267,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 16,
+    marginTop: 4,
+    marginBottom: 18,
     color: '#14532d',
     letterSpacing: 0.2,
   },
@@ -260,36 +276,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 14,
+    marginBottom: 18,
   },
   chip: {
     flex: 1,
-    backgroundColor: '#d1fae5',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    backgroundColor: '#dff6e9',
+    minHeight: 92,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderRadius: 20,
   },
   chipText: {
     color: '#14532d',
+    fontSize: 20,
+    lineHeight: 26,
     fontWeight: '700',
     textAlign: 'center',
   },
   chipOutline: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#86efac',
+    borderColor: '#d1efdd',
     backgroundColor: '#ffffff',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderRadius: 20,
   },
   chipOutlineText: {
-    color: '#166534',
-    fontWeight: '700',
+    color: '#3f6650',
+    fontSize: 13,
+    lineHeight: 18,
     textAlign: 'center',
   },
+  infoLabel: {
+    color: '#526b5c',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
   scannerWrapper: {
-    flex: 1,
+    width: '100%',
+    aspectRatio: 1.03,
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#000000',
@@ -297,45 +329,33 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#d1fae5',
   },
-  livenessOverlay: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 16,
-    backgroundColor: 'rgba(15, 23, 42, 0.72)',
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  livenessText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
   scanHint: {
     color: '#475569',
     fontSize: 14,
+    lineHeight: 21,
     textAlign: 'center',
-    marginBottom: 14,
+    minHeight: 42,
+    marginBottom: 22,
   },
   scanButton: {
     alignSelf: 'center',
-    minWidth: 160,
-    height: 56,
-    borderRadius: 28,
+    width: '60%',
+    minHeight: 56,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 18,
     backgroundColor: '#166534',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#14532d',
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
-    marginBottom: 14,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+    marginBottom: 20,
   },
   scanButtonDisabled: {
-    backgroundColor: '#94a3b8',
+    backgroundColor: '#577565',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -343,16 +363,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+    textAlign: 'center',
   },
   status: {
     color: '#166534',
-    fontSize: 16,
+    fontSize: 14,
+    lineHeight: 21,
     textAlign: 'center',
+    minHeight: 42,
     marginBottom: 12,
   },
   secondaryButton: {
     alignItems: 'center',
     marginTop: 6,
+    paddingVertical: 12,
+    minHeight: 48,
   },
   secondaryText: {
     color: '#166534',

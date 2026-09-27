@@ -223,6 +223,11 @@ session_code: data.session_code,
     <>
       <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
       <main className="main">
+        <header className="workspace-header">
+          <span>Teacher workspace <span className="breadcrumb-separator">/</span> {page === 'dashboard' ? 'Overview' : 'Attendance'}</span>
+          <span className="workspace-welcome">Welcome to your classroom <span className="teacher-avatar" aria-hidden="true">T</span></span>
+        </header>
+        {authError && <p className="auth-message error" role="alert">{authError}</p>}
         {page === 'dashboard' && (
           <Dashboard
             session={session}
