@@ -187,7 +187,7 @@ const FaceScanScreen = ({ navigation, route }) => {
         <View style={styles.scannerWrapper}>
           <CameraView
             ref={cameraRef}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             facing="front"
             mode="picture"
             onMountError={(error) => setStatusMessage(error?.message || 'Camera error. Try again.')}
