@@ -10,12 +10,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { getAttendanceErrorMessage, submitFaceValidation } from '../utils/api';
+import { checkHeadDirection, getAttendanceErrorMessage, submitFaceValidation } from '../utils/api';
 import { getCurrentAttendanceLocation } from '../utils/location';
 
 const logoImage = require('../assets/EduVisionLogo.png');
-const LIVENESS_PROMPT_DELAY_MS = 2500;
-const LIVENESS_PROMPTS = ['Turn your head left.', 'Turn your head right.'];
+const LIVENESS_STEPS = [
+  { direction: 'left', prompt: 'Turn your head slightly left and tap Check Head Turn.' },
+];
 
 function buildFriendlyStatusMessage(serverResponse) {
   if (serverResponse?.reason === 'student_id_face_mismatch') {
@@ -48,26 +49,50 @@ const FaceScanScreen = ({ navigation, route }) => {
     }
   }, [permission?.canAskAgain, permission?.granted, requestPermission]);
 
-  useEffect(() => {
-    if (!permission?.granted || livenessComplete) {
-      return undefined;
+  const livenessMessage = livenessComplete
+    ? 'Face the camera in good lighting, then capture your photo.'
+    : LIVENESS_STEPS[livenessPromptIndex].prompt;
+
+  const handleLivenessCheck = async () => {
+    if (isCapturing) {
+      return;
     }
 
-    const timer = setTimeout(() => {
-      if (livenessPromptIndex >= LIVENESS_PROMPTS.length - 1) {
+    if (!cameraRef.current) {
+      setStatusMessage('Camera starting up. Try again.');
+      return;
+    }
+
+    const expectedDirection = LIVENESS_STEPS[livenessPromptIndex].direction;
+
+    try {
+      setIsCapturing(true);
+      setStatusMessage('Checking head turn...');
+
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      const photoResponse = await fetch(photo.uri);
+      const photoBlob = await photoResponse.blob();
+      const { direction } = await checkHeadDirection(photoBlob);
+
+      if (direction !== expectedDirection) {
+        setStatusMessage(`We did not detect a ${expectedDirection} turn. Try again.`);
+        return;
+      }
+
+      if (livenessPromptIndex >= LIVENESS_STEPS.length - 1) {
         setLivenessComplete(true);
+        setStatusMessage('');
         return;
       }
 
       setLivenessPromptIndex((currentIndex) => currentIndex + 1);
-    }, LIVENESS_PROMPT_DELAY_MS);
-
-    return () => clearTimeout(timer);
-  }, [livenessComplete, livenessPromptIndex, permission?.granted]);
-
-  const livenessMessage = livenessComplete
-    ? 'Face the camera in good lighting, then capture your photo.'
-    : LIVENESS_PROMPTS[livenessPromptIndex];
+      setStatusMessage(`${expectedDirection === 'left' ? 'Left' : 'Right'} turn confirmed.`);
+    } catch (error) {
+      setStatusMessage(error?.message || 'Could not check your head turn. Try again.');
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const handleCapture = async () => {
     try {
@@ -200,23 +225,23 @@ const FaceScanScreen = ({ navigation, route }) => {
         </Text>
 
         <TouchableOpacity
-          style={[styles.scanButton, (!livenessComplete || isCapturing) && styles.scanButtonDisabled]}
-          onPress={handleCapture}
-          disabled={isCapturing || !livenessComplete}
+          style={[styles.scanButton, isCapturing && styles.scanButtonDisabled]}
+          onPress={livenessComplete ? handleCapture : handleLivenessCheck}
+          disabled={isCapturing}
           accessibilityRole="button"
-          accessibilityState={{ disabled: isCapturing || !livenessComplete, busy: isCapturing }}
+          accessibilityState={{ disabled: isCapturing, busy: isCapturing }}
         >
           {isCapturing ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.scanButtonText}>Capture Face</Text>
+            <Text style={styles.scanButtonText}>{livenessComplete ? 'Capture Face' : 'Check Head Turn'}</Text>
           )}
         </TouchableOpacity>
 
         <Text accessibilityLiveRegion="polite" style={styles.status}>
           {statusMessage || (livenessComplete
             ? 'Ready to capture. Your location will be checked next.'
-            : 'Follow the head-movement prompts to get ready.')}
+            : 'Complete the head turn check to continue.')}
         </Text>
 
         <TouchableOpacity accessibilityRole="button" style={styles.secondaryButton} onPress={() => navigation.navigate('Login')}>
