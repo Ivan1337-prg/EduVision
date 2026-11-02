@@ -18,6 +18,10 @@ MAX_IMAGE_DIMENSION = 1600
 LIVE_NUM_JITTERS = 2
 STORED_NUM_JITTERS = 1
 UPSAMPLE_STEPS = (0, 1, 2)
+HEAD_TURN_THRESHOLD = 0.12
+HEAD_DIRECTION_IMAGE_DIMENSION = 640
+HEAD_DIRECTION_UPSAMPLE_STEPS = (0, 1)
+FRONT_CAMERA_IMAGE_IS_MIRRORED = False
 
 
 def decode_image_from_binary(image_bytes: bytes):
@@ -98,6 +102,43 @@ def extract_face_encodings(image_bytes: bytes, *, image_label: str, include_mirr
         raise HTTPException(status_code=400, detail=f"No clear face was detected in the {image_label} image. Move into better light, look straight at the camera, and try again.")
 
     return candidate_encodings
+
+
+def detect_head_direction(image_bytes: bytes):
+    decoded_image = decode_image_from_binary(image_bytes)
+    decoded_image.thumbnail((HEAD_DIRECTION_IMAGE_DIMENSION, HEAD_DIRECTION_IMAGE_DIMENSION))
+    image = np.array(decoded_image)
+
+    face_location = None
+    for upsample_count in HEAD_DIRECTION_UPSAMPLE_STEPS:
+        face_location = select_primary_face_location(
+            face_recognition.face_locations(image, number_of_times_to_upsample=upsample_count, model="hog")
+        )
+        if face_location is not None:
+            break
+
+    if face_location is None:
+        raise HTTPException(status_code=400, detail="No face was detected. Turn your head only slightly and keep your face in the frame.")
+
+    landmarks = face_recognition.face_landmarks(image, face_locations=[face_location])[0]
+    first_eye = np.mean(landmarks["left_eye"], axis=0)
+    second_eye = np.mean(landmarks["right_eye"], axis=0)
+    nose_tip = np.array(landmarks["nose_bridge"][-1])
+
+    eye_axis = second_eye - first_eye
+    eye_axis_length_squared = np.dot(eye_axis, eye_axis)
+    if eye_axis_length_squared == 0:
+        return "forward"
+
+    nose_offset = np.dot(nose_tip - (first_eye + second_eye) / 2, eye_axis) / eye_axis_length_squared
+    if FRONT_CAMERA_IMAGE_IS_MIRRORED:
+        nose_offset = -nose_offset
+
+    if nose_offset > HEAD_TURN_THRESHOLD:
+        return "left"
+    if nose_offset < -HEAD_TURN_THRESHOLD:
+        return "right"
+    return "forward"
 
 
 def calculate_best_face_distance(live_encodings, stored_image_bytes: bytes):

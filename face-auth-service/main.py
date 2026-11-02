@@ -13,7 +13,7 @@ from attendance_utils import (
     get_student_by_code,
     seed_attendance_for_session,
 )
-from face_utils import compare_face_against_roster, is_confident_roster_match
+from face_utils import compare_face_against_roster, detect_head_direction, is_confident_roster_match
 from location_utils import verify_student_is_within_session_radius
 import sys
 import uvicorn
@@ -119,6 +119,12 @@ async def root():
 @app.get("/health")
 async def health():
     return {"message": "backend running"}
+
+
+@app.post("/liveness/head-direction")
+async def check_head_direction(request: Request):
+    image_bytes = await request.body()
+    return {"direction": detect_head_direction(image_bytes)}
 
 
 @app.post("/session/start-session")
