@@ -21,7 +21,8 @@ import bcrypt
 from dotenv import load_dotenv
 from datetime import datetime
 import os
-
+import secrets
+import string
 load_dotenv()
 app = FastAPI()
 
@@ -68,6 +69,23 @@ def normalize_teacher_name(name: str) -> str:
 
 def normalize_teacher_email(email: str) -> str:
     return email.strip().lower()
+
+def generate_session_code():
+    words = [
+        "apple",
+        "mango",
+        "orange",
+        "grape",
+        "peach",
+        "berry",
+        "melon",
+        "lemon"
+    ]
+
+    word = secrets.choice(words)
+    number = ''.join(secrets.choice(string.digits) for _ in range(3))
+
+    return f"{word}{number}"
 
 
 app.add_middleware(
@@ -120,7 +138,10 @@ async def start_session(session_request: StartSession, request: Request):
                 "message": "session already active",
                 "session_id": f"{active_session[0]}",
                 "status": active_session[4],
+                "session_code": active_session[5],
             }
+        
+        session_code = generate_session_code()
 
         db_cursor.execute(
             """
@@ -130,16 +151,18 @@ async def start_session(session_request: StartSession, request: Request):
                 status,
                 latitude,
                 longitude,
-                radius_meters
+                radius_meters,
+                session_code
             )
-            VALUES (%s, CURRENT_TIMESTAMP, 'active', %s, %s, %s)
-            RETURNING id, start_time, status, latitude, longitude, radius_meters
+            VALUES (%s, CURRENT_TIMESTAMP, 'active', %s, %s, %s, %s)
+            RETURNING id, start_time, status, latitude, longitude, radius_meters, session_code 
             """,
             (
                 teacher_id,
                 session_request.latitude,
                 session_request.longitude,
                 session_request.radius_meters,
+                session_code,
             )
         )
 
@@ -158,6 +181,7 @@ async def start_session(session_request: StartSession, request: Request):
         return {
             "message": "session start",
             "session_id": f"{session_id}",
+            "session_code": created_session[6],
             "start_time": created_session[1].isoformat() if created_session[1] else None,
             "status": created_session[2],
             "latitude": created_session[3],
@@ -206,6 +230,7 @@ async def current_session(request: Request):
                 "start_time": active_session[2].isoformat() if active_session[2] else None,
                 "end_time": active_session[3].isoformat() if active_session[3] else None,
                 "status": active_session[4],
+                "session_code": active_session[5],
             },
             "attendance": fetch_session_attendance_rows(db_cursor, active_session[0]),
         }
@@ -280,6 +305,8 @@ async def validate_student_session(
         )
 
         session_row = ensure_session_exists_and_active(db_cursor, session_id)
+        internal_session_id = session_row[0]
+        
         distance_meters = verify_student_is_within_session_radius(
             student_latitude=latitude,
             student_longitude=longitude,
@@ -293,7 +320,7 @@ async def validate_student_session(
             student_code=student_code,
         )
         student = get_student_by_code(db_cursor, student_code)
-        ensure_device_token_available_for_student(db_cursor, session_id, student[0], device_token)
+        ensure_device_token_available_for_student(db_cursor, internal_session_id, student[0], device_token)
         log_student_auth_step(
             f"Student {student[1]} with code {student[2]} was accepted. Loading attendance record.",
             session_id=session_id,
@@ -307,7 +334,7 @@ async def validate_student_session(
             FROM attendance
             WHERE session_id = %s AND student_id = %s
             """,
-            (session_id, student[0])
+            (internal_session_id, student[0])
         )
         attendance_row = db_cursor.fetchone()
         if attendance_row:
@@ -396,6 +423,8 @@ async def validate_student_face(
             student_code=student_code,
         )
         session_row = ensure_session_exists_and_active(db_cursor, session_id)
+        internal_session_id = session_row[0]
+        
         distance_meters = verify_student_is_within_session_radius(
             student_latitude=latitude,
             student_longitude=longitude,
@@ -409,7 +438,7 @@ async def validate_student_face(
             student_code=student_code,
         )
         student = get_student_by_code(db_cursor, student_code)
-        ensure_device_token_available_for_student(db_cursor, session_id, student[0], device_token)
+        ensure_device_token_available_for_student(db_cursor, internal_session_id, student[0], device_token)
         log_student_auth_step(
             f"Student {student[1]} with code {student[2]} was accepted. Preparing roster face comparison.",
             session_id=session_id,
@@ -471,7 +500,7 @@ async def validate_student_face(
             FROM attendance
             WHERE session_id = %s AND student_id = %s
             """,
-            (session_id, student[0])
+            (internal_session_id, student[0])
         )
         attendance_row = db_cursor.fetchone()
         if attendance_row:
@@ -491,7 +520,7 @@ async def validate_student_face(
                 VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
                 RETURNING id, first_check_in, fifteen_min_confirm, device_token
                 """,
-                (student[0], session_id, device_token)
+                (student[0], internal_session_id, device_token)
             )
             attendance_row = db_cursor.fetchone()
             message = "check-in successful"
@@ -591,7 +620,7 @@ async def validate_student_face(
                 "distance_meters": round(distance_meters, 2),
                 "allowed_radius_meters": session_row[4],
             },
-            "attendance": fetch_session_attendance_rows(db_cursor, session_id),
+            "attendance": fetch_session_attendance_rows(db_cursor, internal_session_id),
         }
 
     except HTTPException as exc:

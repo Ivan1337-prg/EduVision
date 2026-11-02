@@ -117,6 +117,12 @@ def bootstrap_db():
         )
         db_cursor.execute(
             """
+            ALTER TABLE class_sessions
+            ADD COLUMN IF NOT EXISTS session_code TEXT UNIQUE
+            """
+        )
+        db_cursor.execute(
+            """
             CREATE UNIQUE INDEX IF NOT EXISTS one_active_session_per_teacher
             ON class_sessions (teacher_id)
             WHERE status = 'active'

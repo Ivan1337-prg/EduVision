@@ -82,9 +82,11 @@ function Session({ onEndSession, onStartSession, session, sessionLoading, sessio
 
   return (
     <section className="card session-card">
-      <p className="eyebrow">Session controls</p>
-      <h2 className="currentSession">{sessionActive ? 'Your session is live' : 'Ready for your next class?'}</h2>
-      <p><strong>Session ID:</strong> {session?.session_id ?? 'Not started yet'}</p>
+        <p className="eyebrow">Session controls</p>
+        <h2 className="currentSession">
+          {sessionActive ? 'Your session is live' : 'Ready for your next class?'}
+        </h2>
+        <p><strong>Session Code:</strong> {session?.session_code ?? 'Not started yet'}</p>
       <p><strong>Status:</strong> {session?.status ?? 'inactive'}</p>
       <p><strong>Started At:</strong> {session?.start_time ? new Date(session.start_time).toLocaleString() : 'Not started yet'}</p>
       {sessionMessage ? <p className="session-message">{sessionMessage}</p> : null}
