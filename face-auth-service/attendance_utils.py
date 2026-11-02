@@ -54,13 +54,14 @@ def fetch_session_attendance_rows(db_cursor, session_id: str):
 
 
 def ensure_session_exists_and_active(db_cursor, session_id: str):
+    normalized_session_reference = session_id.strip()
     db_cursor.execute(
         """
-        SELECT id, status, latitude, longitude, radius_meters
+        SELECT id, status, latitude, longitude, radius_meters, session_code
         FROM class_sessions
-        WHERE id::text = %s OR session_code = %s
+        WHERE id::text = %s OR LOWER(session_code) = LOWER(%s)
         """,
-        (session_id, session_id)
+        (normalized_session_reference, normalized_session_reference)
     )
     session_row = db_cursor.fetchone()
 

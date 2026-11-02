@@ -19,17 +19,17 @@ const logoImage = require('../assets/EduVisionLogo.png');
 
 const LoginScreen = ({ navigation }) => {
   const [studentCode, setStudentCode] = useState('');
-  const [sessionId, setSessionId] = useState('');
+  const [sessionCode, setSessionCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     try {
       const normalizedStudentCode = studentCode.trim();
-      const normalizedSessionId = sessionId.trim();
+      const normalizedSessionCode = sessionCode.trim().toLowerCase();
 
-      if (!normalizedStudentCode || !normalizedSessionId) {
-        setError('Please enter your student code and class session Id.');
+      if (!normalizedStudentCode || !normalizedSessionCode) {
+        setError('Please enter your student code and class session code.');
         return;
       }
 
@@ -38,7 +38,7 @@ const LoginScreen = ({ navigation }) => {
       const location = await getCurrentAttendanceLocation();
       const response = await validateStudentSession({
         studentCode: normalizedStudentCode,
-        sessionId: normalizedSessionId,
+        sessionId: normalizedSessionCode,
         latitude: location.latitude,
         longitude: location.longitude,
       });
@@ -47,6 +47,7 @@ const LoginScreen = ({ navigation }) => {
         studentCode: response.student.student_code,
         studentName: response.student.student_name,
         sessionId: response.session_id,
+        sessionCode: response.session_code || normalizedSessionCode,
       });
     } catch (error) {
       setError(getAttendanceErrorMessage(error));
@@ -79,7 +80,7 @@ const LoginScreen = ({ navigation }) => {
                 <View pointerEvents="none" accessible={false} style={styles.welcomeCircleTop} />
                 <View pointerEvents="none" accessible={false} style={styles.welcomeCircleBottom} />
                 <Text style={styles.welcomeTitle}>Ready to check in?</Text>
-                <Text style={styles.welcomeText}>Enter your student code and session ID below.</Text>
+                <Text style={styles.welcomeText}>Enter your student code and session code below.</Text>
               </View>
               <Text style={styles.label}>Student Code</Text>
               <TextInput
@@ -95,16 +96,17 @@ const LoginScreen = ({ navigation }) => {
                 autoCorrect={false}
                 returnKeyType="next"
               />
-              <Text style={styles.label}>Session ID</Text>
+              <Text style={styles.label}>Session Code</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your class session id"
+                placeholder="Example: apple123"
                 placeholderTextColor="#94a3b8"
-                value={sessionId}
+                value={sessionCode}
                 onChangeText={(value) => {
-                  setSessionId(value);
+                  setSessionCode(value);
                   if (error) setError('');
                 }}
+                autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="done"
               />

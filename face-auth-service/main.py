@@ -70,7 +70,7 @@ def normalize_teacher_name(name: str) -> str:
 def normalize_teacher_email(email: str) -> str:
     return email.strip().lower()
 
-def generate_session_code():
+def generate_session_code(db_cursor, max_attempts=50):
     words = [
         "apple",
         "mango",
@@ -82,10 +82,19 @@ def generate_session_code():
         "lemon"
     ]
 
-    word = secrets.choice(words)
-    number = ''.join(secrets.choice(string.digits) for _ in range(3))
+    for _ in range(max_attempts):
+        word = secrets.choice(words)
+        number = ''.join(secrets.choice(string.digits) for _ in range(3))
+        session_code = f"{word}{number}"
 
-    return f"{word}{number}"
+        db_cursor.execute(
+            "SELECT 1 FROM class_sessions WHERE session_code = %s LIMIT 1",
+            (session_code,),
+        )
+        if not db_cursor.fetchone():
+            return session_code
+
+    raise RuntimeError("could not generate an available session code")
 
 
 app.add_middleware(
@@ -141,7 +150,7 @@ async def start_session(session_request: StartSession, request: Request):
                 "session_code": active_session[5],
             }
         
-        session_code = generate_session_code()
+        session_code = generate_session_code(db_cursor)
 
         db_cursor.execute(
             """
@@ -198,7 +207,7 @@ async def start_session(session_request: StartSession, request: Request):
     except Exception as e:
         if conn:
             conn.rollback()
-        return {"message": f"{e}"}
+        raise HTTPException(status_code=500, detail=f"server problem {e}")
 
     finally:
         if db_cursor:
@@ -348,7 +357,8 @@ async def validate_student_session(
 
         return {
             "message": "student and session verified",
-            "session_id": session_id,
+            "session_id": str(internal_session_id),
+            "session_code": session_row[5],
             "student": {
                 "student_id": str(student[0]),
                 "student_name": student[1],
@@ -614,7 +624,8 @@ async def validate_student_face(
             "student_code": student[2],
             "student_name": student[1],
             "student_id": str(student[0]),
-            "session_id": session_id,
+            "session_id": str(internal_session_id),
+            "session_code": session_row[5],
             "location": {
                 "verified": True,
                 "distance_meters": round(distance_meters, 2),

@@ -34,7 +34,7 @@ function buildFriendlyStatusMessage(serverResponse) {
 }
 
 const FaceScanScreen = ({ navigation, route }) => {
-  const { studentCode, studentName, sessionId } = route.params;
+  const { studentCode, studentName, sessionId, sessionCode } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
   const [statusMessage, setStatusMessage] = useState('');
   const [livenessPromptIndex, setLivenessPromptIndex] = useState(0);
@@ -132,6 +132,7 @@ const FaceScanScreen = ({ navigation, route }) => {
         studentCode,
         studentName: serverResponse.student_name || studentName,
         sessionId,
+        sessionCode: serverResponse.session_code || sessionCode,
         recentScanTimestamp,
         attendanceStatus: studentAttendance.status,
         confidenceScore: serverResponse.confidence_score,
@@ -179,8 +180,8 @@ const FaceScanScreen = ({ navigation, route }) => {
             <Text style={styles.chipText}>{studentName}</Text>
           </View>
           <View style={styles.chipOutline}>
-            <Text style={styles.infoLabel}>Session</Text>
-            <Text selectable style={styles.chipOutlineText}>{sessionId}</Text>
+            <Text style={styles.infoLabel}>Session Code</Text>
+            <Text selectable style={styles.chipOutlineText}>{sessionCode}</Text>
           </View>
         </View>
 
