@@ -17,6 +17,7 @@ const AttendanceScreen = ({ navigation, route }) => {
     studentCode,
     studentName,
     sessionId,
+    sessionCode,
     recentScanTimestamp,
     attendanceStatus,
     confidenceScore,
@@ -58,8 +59,8 @@ const AttendanceScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Session ID</Text>
-          <Text selectable style={[styles.infoValue, styles.sessionValue]}>{sessionId}</Text>
+          <Text style={styles.infoLabel}>Session Code</Text>
+          <Text selectable style={[styles.infoValue, styles.sessionValue]}>{sessionCode || sessionId}</Text>
         </View>
 
         <View style={styles.infoCard}>

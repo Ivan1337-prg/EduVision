@@ -176,6 +176,17 @@ export async function validateStudentSession({ sessionId, studentCode, latitude,
   );
 }
 
+export async function checkHeadDirection(imageBlob) {
+  return requestWithFallback('/liveness/head-direction', {
+    method: 'POST',
+    headers: {
+      ...TUNNEL_BYPASS_HEADERS,
+      'Content-Type': imageBlob.type || 'image/jpeg',
+    },
+    body: imageBlob,
+  });
+}
+
 export async function submitFaceValidation({ sessionId, studentCode, imageBlob, latitude, longitude }) {
   const locationQuery = buildLocationQuery(latitude, longitude);
 

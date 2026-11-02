@@ -52,7 +52,7 @@ function Attendance({ attendance, session, sessionLoading, sessionMessage, setAt
       </div>
 
       <div className="session-summary card">
-        <p><strong>Session:</strong> {session?.session_id ?? 'No active session'}</p>
+        <p><strong>Session Code:</strong> {session?.session_code ?? 'No active session'}</p>
         <p><strong>Status:</strong> {session?.status ?? 'inactive'}</p>
         <p><strong>Updates:</strong> {sessionLoading ? 'Refreshing...' : session ? 'Live every 5 seconds' : 'Start a session to receive check-ins'}</p>
         {sessionMessage ? <p className="session-message">{sessionMessage}</p> : null}
